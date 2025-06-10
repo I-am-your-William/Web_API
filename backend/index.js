@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { clerkMiddleware, requireAuth, getAuth, clerkClient } from '@clerk/express';
+import admin from 'firebase-admin';
+
 
 dotenv.config();
 
