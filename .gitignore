@@ -1,6 +1,7 @@
 # Backend dependencies and builds
 backend/.env
 backend/node_modules/
+backend/serviceAccountkey.json
 
 
 # Frontend dependencies and builds
