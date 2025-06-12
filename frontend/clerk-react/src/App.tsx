@@ -1,5 +1,6 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
-import FirebaseTest from './components/firebasetest'
+// src/App.tsx
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import FirebaseTest from './components/firebasetest';
 
 export default function App() {
   return (
@@ -22,5 +23,5 @@ export default function App() {
         </SignedIn>
       </main>
     </>
-  )
+  );
 }

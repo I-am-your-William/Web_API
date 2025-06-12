@@ -1,42 +1,105 @@
-import { useAuth } from '@clerk/clerk-react'
-// @ts-ignore
-import { auth, db } from '../lib/firebase'
-
-import { signInWithCustomToken } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 
 export default function FirebaseTest() {
-  const { getToken, userId } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editLocationName, setEditLocationName] = useState('');
 
-  const signIntoFirebase = async () => {
-    const token = await getToken({ template: 'integration_firebase' })
-    if (!token) {
-      console.error('No token found')
-      return
-    }
-    const userCred = await signInWithCustomToken(auth, token)
-    console.log('Signed into Firebase:', userCred.user)
-  }
+  const fetchWishlist = async () => {
+    if (!isLoaded || !isSignedIn) return;
+    const token = await getToken();
+    const res = await fetch('http://localhost:5000/api/wishlist', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    setWishlistItems(data);
+  };
 
-  const getFirestoreData = async () => {
-    const docRef = doc(db, 'example', 'example-document')
-    const docSnap = await getDoc(docRef)
+  const addWishlistItem = async () => {
+    if (!isLoaded || !isSignedIn) return;
+    const token = await getToken();
+    await fetch('http://localhost:5000/api/wishlist', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        locationName: 'Kyoto',
+        locationId: 'kyoto_123',
+      }),
+    });
+    fetchWishlist();
+  };
 
-    if (docSnap.exists()) {
-      console.log('Document data:', docSnap.data())
-    } else {
-      console.log('No such document!')
-    }
-  }
+  const deleteItem = async (id: string) => {
+    if (!isLoaded || !isSignedIn) return;
+    const token = await getToken();
+    await fetch(`http://localhost:5000/api/wishlist/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchWishlist();
+  };
 
-  if (!userId) return <p>Please sign in to test Firebase.</p>
+  const updateItem = async (id: string) => {
+    if (!isLoaded || !isSignedIn) return;
+    const token = await getToken();
+    await fetch(`http://localhost:5000/api/wishlist/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        locationName: editLocationName,
+        locationId: 'tokyo_123', // Keep same ID for now
+      }),
+    });
+    setEditItemId(null);
+    setEditLocationName('');
+    fetchWishlist();
+  };
+
+  useEffect(() => {
+    fetchWishlist();
+  }, [isLoaded, isSignedIn]);
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-      <button onClick={signIntoFirebase}>Sign in to Firebase</button>
-      <button onClick={getFirestoreData} style={{ marginLeft: '1rem' }}>
-        Get Firestore Data
-      </button>
+    <div>
+      <h2>Test Firebase Wishlist</h2>
+      <button onClick={addWishlistItem}>Add Wishlist Item</button>
+      <button onClick={fetchWishlist}>Get Firestore Data</button>
+
+      <ul>
+        {wishlistItems.map((item) => (
+          <li key={item.id}>
+            {editItemId === item.id ? (
+              <>
+                <input
+                  value={editLocationName}
+                  onChange={(e) => setEditLocationName(e.target.value)}
+                />
+                <button onClick={() => updateItem(item.id)}>Save</button>
+                <button onClick={() => setEditItemId(null)}>Cancel</button>
+              </>
+            ) : (
+              <>
+                {item.locationName} ({item.locationId})
+                <button onClick={() => {
+                  setEditItemId(item.id);
+                  setEditLocationName(item.locationName);
+                }}>
+                  Edit
+                </button>
+                <button onClick={() => deleteItem(item.id)}>Delete</button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
-  )
+  );
 }
