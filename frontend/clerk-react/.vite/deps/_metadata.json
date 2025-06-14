@@ -1,0 +1,49 @@
+{
+  "hash": "0aba89db",
+  "configHash": "b0c3dc5a",
+  "lockfileHash": "6874e582",
+  "browserHash": "1dd7b56a",
+  "optimized": {
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "05eeb50d",
+      "needsInterop": false
+    },
+    "@clerk/clerk-react": {
+      "src": "../../node_modules/@clerk/clerk-react/dist/index.mjs",
+      "file": "@clerk_clerk-react.js",
+      "fileHash": "350242b2",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "be587277",
+      "needsInterop": true
+    },
+    "react-select": {
+      "src": "../../node_modules/react-select/dist/react-select.esm.js",
+      "file": "react-select.js",
+      "fileHash": "d24111a3",
+      "needsInterop": false
+    },
+    "react-select/creatable": {
+      "src": "../../node_modules/react-select/creatable/dist/react-select-creatable.esm.js",
+      "file": "react-select_creatable.js",
+      "fileHash": "e1467ac5",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-ZTUPMIDQ": {
+      "file": "chunk-ZTUPMIDQ.js"
+    },
+    "chunk-JPFIJ2ZJ": {
+      "file": "chunk-JPFIJ2ZJ.js"
+    },
+    "chunk-3A6WRQ5K": {
+      "file": "chunk-3A6WRQ5K.js"
+    }
+  }
+}
