@@ -1,0 +1,28 @@
+# Backend dependencies and builds
+backend/.env
+backend/node_modules/
+backend/serviceAccountkey.json
+
+
+# Frontend dependencies and builds
+frontend/clerk-react/.env
+frontend/clerk-react/node_modules/
+frontend/clerk-react/dist/
+frontend/clerk-react/dist-ssr/
+frontend/clerk-react/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor configs
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
