@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
-// import { doc, setDoc } from 'firebase/firestore';
-// import { db } from '../lib/firebase'; // Adjust this import based on your project structure
 
 const FlightDetails: React.FC = () => {
   const location = useLocation();
@@ -13,9 +11,8 @@ const FlightDetails: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [numPassengers, setNumPassengers] = useState(1);
-  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // New: structure for multiple passenger data
   const [passengerDetails, setPassengerDetails] = useState([
     { name: '', gender: '', birthday: '' }
   ]);
@@ -52,57 +49,59 @@ const FlightDetails: React.FC = () => {
     setPassengerDetails(updatedDetails);
   };
 
-const handleBooking = async () => {
-  if (!userId) {
-    alert('Please log in to book a flight.');
-    return;
-  }
+  const handleBooking = async () => {
+    if (!userId) {
+      alert('Please log in to book a flight.');
+      return;
+    }
 
-  if (passengerDetails.some(p => !p.name.trim() || !p.gender || !p.birthday)) {
-    alert('Please complete all passenger information.');
-    return;
-  }
+    if (passengerDetails.some(p => !p.name.trim() || !p.gender || !p.birthday)) {
+      alert('Please complete all passenger information.');
+      return;
+    }
 
-  if (!flight || !(flight.id || id)) {
-    alert('Flight information is missing.');
-    return;
-  }
+    if (!flight || !(flight.id || id)) {
+      alert('Flight information is missing.');
+      return;
+    }
 
-  const token = await getToken();
+    const token = await getToken();
 
-  const bookingPayload = {
-    userId,
-    flightId: flight.id || id,
-    passengerDetails,
-    flightDetails: flight,
+    const bookingPayload = {
+      userId,
+      flightId: flight.id || id,
+      passengerDetails,
+      flightDetails: flight,
+    };
+
+    try {
+      const res = await fetch('http://localhost:5000/api/bookings/flights', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(bookingPayload),
+      });
+
+      const data = await res.json();
+      console.log('📦 Booking API response:', res.status, data);
+
+      if (!res.ok) {
+        const errorMsg = data?.message || data?.error || 'Booking failed';
+        alert(`Booking failed: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        navigate(`/bookings/${data.bookingId}`);
+      }, 3000);
+    } catch (error: any) {
+      console.error('Booking failed:', error);
+      alert(`Booking failed. ${error?.message || 'Please try again.'}`);
+    }
   };
-
-  try {
-    const res = await fetch('http://localhost:5000/api/bookings/flights', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(bookingPayload),
-});
-
-const data = await res.json();
-console.log('📦 Booking API response:', res.status, data);
-
-if (!res.ok) {
-  const errorMsg = data?.message || data?.error || 'Booking failed';
-  alert(`Booking failed: ${errorMsg}`);
-  throw new Error(errorMsg);
-}
-
-    navigate(`/bookings/${data.bookingId}`);
-  } catch (error: any) {
-    console.error('Booking failed:', error);
-    alert(`Booking failed. ${error?.message || 'Please try again.'}`);
-  }
-};
-
 
   const renderItinerary = (itinerary: any, index: number, type: 'Departure' | 'Return') => {
     return (
@@ -120,7 +119,6 @@ if (!res.ok) {
                 <strong>Carrier:</strong> {seg.carrierCode}<br />
                 {seg.aircraft && <><strong>Aircraft:</strong> {seg.aircraft?.code}</>}
               </p>
-              {/* Layover Time */}
               {i > 0 && (() => {
                 const prevArrival = new Date(itinerary.segments[i - 1].arrival.at);
                 const layoverMinutes = Math.floor((departureTime.getTime() - prevArrival.getTime()) / 60000);
@@ -143,19 +141,31 @@ if (!res.ok) {
   if (error || !flight) return <p>{error || 'Flight details not available.'}</p>;
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Flight Details (ID: {id})</h2>
-      <button onClick={() => navigate(-1)}>← Back to Results</button>
+    <div style={{ display: 'flex', padding: '2rem', gap: '2rem', alignItems: 'flex-start' }}>
+      {/* Left: Flight Details */}
+      <div style={{ flex: 2 }}>
+        <h2>Flight Details (ID: {id})</h2>
+        <button onClick={() => navigate(-1)}>← Back to Results</button>
 
-      {flight.itineraries?.map((itinerary: any, idx: number) =>
-        renderItinerary(itinerary, idx, idx === 0 ? 'Departure' : 'Return')
-      )}
+        {flight.itineraries?.map((itinerary: any, idx: number) =>
+          renderItinerary(itinerary, idx, idx === 0 ? 'Departure' : 'Return')
+        )}
 
-      <p><strong>Airline:</strong> {flight.validatingAirlineCodes?.[0]}</p>
-      <p><strong>Total Price:</strong> MYR {flight.price?.total}</p>
+        <p><strong>Airline:</strong> {flight.validatingAirlineCodes?.[0]}</p>
+        <p><strong>Total Price:</strong> MYR {flight.price?.total}</p>
+      </div>
 
-      {/* Passenger Input Section */}
-      <div style={{ marginTop: '2rem' }}>
+      {/* Right: Passenger Booking Panel */}
+      <div style={{
+        flex: 1,
+        border: '1px solid #ccc',
+        padding: '1rem',
+        borderRadius: '8px',
+        backgroundColor: '#f9f9f9',
+        position: 'sticky',
+        top: '2rem'
+      }}>
+        <h3>Passenger Details</h3>
         <label><strong>Number of Passengers:</strong></label><br />
         <input
           type="number"
@@ -166,7 +176,7 @@ if (!res.ok) {
         />
 
         {passengerDetails.map((passenger, idx) => (
-          <div key={idx} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #ccc' }}>
+          <div key={idx} style={{ marginBottom: '1rem' }}>
             <label>Passenger {idx + 1} Name:</label><br />
             <input
               type="text"
@@ -196,16 +206,59 @@ if (!res.ok) {
             />
           </div>
         ))}
+
+        <button
+          style={{
+            marginTop: '1rem',
+            backgroundColor: '#0070f3',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '5px',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+          onClick={handleBooking}
+        >
+          ✈️ Book Now
+        </button>
       </div>
 
-      <button style={{ marginTop: '2rem' }} onClick={handleBooking}>
-        ✈️ Book Now
-      </button>
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', padding: '2rem', borderRadius: '10px',
+            textAlign: 'center', maxWidth: '400px', width: '90%'
+          }}>
+            <h3 style={{ marginBottom: '1rem' }}>🎉 Booking Successful!</h3>
+            <p>You will be redirected to your booking shortly.</p>
+            <button
+              onClick={() => navigate('/bookings')}
+              style={{
+                marginTop: '1rem',
+                backgroundColor: '#0070f3',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '5px',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              Go to My Bookings Now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default FlightDetails;
+
 
 // import React, { useEffect, useState } from 'react';
 // import { useLocation, useParams, useNavigate } from 'react-router-dom';

@@ -11,6 +11,8 @@ frontend/clerk-react/dist/
 frontend/clerk-react/dist-ssr/
 frontend/clerk-react/.vite/
 
+node_modules/
+
 # Logs
 *.log
 npm-debug.log*

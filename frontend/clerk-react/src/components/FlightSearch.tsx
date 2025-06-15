@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import { useNavigate } from 'react-router-dom';
+//import airports from './airports.json'; // Make sure you import your airports list
 
 interface FlightOffer {
   id: string;
-  price: {
-    total: string;
-  };
+  price: { total: string };
   itineraries: {
     segments: {
       departure: { iataCode: string; at: string };
@@ -19,166 +18,163 @@ interface FlightOffer {
   }[];
   travelerPricings?: {
     fareDetailsBySegment?: {
-      includedCheckedBags?: {
-        weight?: number;
-      };
+      includedCheckedBags?: { weight?: number };
     }[];
   }[];
 }
 
-const airports = [
-  { code: 'KUL', name: 'Kuala Lumpur International Airport' },
-  { code: 'NRT', name: 'Narita International Airport' },
-  { code: 'SIN', name: 'Changi Airport' },
-  { code: 'PEN', name: 'Penang International Airport' },
-  { code: 'HND', name: 'Haneda Airport' },
-  { code: 'BKK', name: 'Suvarnabhumi Airport' },
-  { code: 'HKG', name: 'Hong Kong International Airport' },
-  { code: 'ICN', name: 'Incheon International Airport' },
-  { code: 'MNL', name: 'Ninoy Aquino International Airport' },
-  { code: 'CGK', name: 'Soekarno–Hatta International Airport' },
-  { code: 'DPS', name: 'Ngurah Rai International Airport' },
-  { code: 'BOM', name: 'Chhatrapati Shivaji Maharaj International Airport' },
-  { code: 'DEL', name: 'Indira Gandhi International Airport' },
-  { code: 'DOH', name: 'Hamad International Airport' },
-  { code: 'DXB', name: 'Dubai International Airport' },
-  { code: 'CDG', name: 'Charles de Gaulle Airport' },
-  { code: 'JFK', name: 'John F. Kennedy International Airport' },
-  { code: 'LHR', name: 'London Heathrow Airport' },
-  { code: 'LAX', name: 'Los Angeles International Airport' },
-  { code: 'ORD', name: 'O’Hare International Airport' },
-  { code: 'FRA', name: 'Frankfurt Airport' },
-  { code: 'AMS', name: 'Amsterdam Airport Schiphol' },
-  { code: 'MAD', name: 'Adolfo Suárez Madrid–Barajas Airport' },
-  { code: 'BCN', name: 'Barcelona–El Prat Airport' },
-  { code: 'ZRH', name: 'Zurich Airport' },
-  { code: 'VIE', name: 'Vienna International Airport' },
-  { code: 'IST', name: 'Istanbul Airport' },
-  { code: 'TLV', name: 'Ben Gurion Airport' },
-  { code: 'CAI', name: 'Cairo International Airport' },
-  { code: 'RUH', name: 'King Khalid International Airport' },
-  { code: 'JED', name: 'King Abdulaziz International Airport' },
-  { code: 'KWI', name: 'Kuwait International Airport' },
-  { code: 'MCT', name: 'Muscat International Airport' },
-  { code: 'BAH', name: 'Bahrain International Airport' },
-  { code: 'KTM', name: 'Tribhuvan International Airport' },
-  { code: 'DAC', name: 'Hazrat Shahjalal International Airport' },
-  { code: 'CMB', name: 'Bandaranaike International Airport' },
-  { code: 'MLE', name: 'Velana International Airport' },
-  { code: 'PNH', name: 'Phnom Penh International Airport' },
-  { code: 'REP', name: 'Siem Reap International Airport' },
-  { code: 'SGN', name: 'Tan Son Nhat International Airport' },
-  { code: 'HAN', name: 'Noi Bai International Airport' },
-  { code: 'DAD', name: 'Da Nang International Airport' },
-  { code: 'HUI', name: 'Phu Bai International Airport' },
-  { code: 'KOS', name: 'Sihanoukville International Airport' },
-  { code: 'LPQ', name: 'Luang Prabang International Airport' },
-  { code: 'VTE', name: 'Wattay International Airport' },
-  { code: 'RNO', name: 'Reno-Tahoe International Airport' },
-  { code: 'LAS', name: 'McCarran International Airport' },
-  { code: 'PHX', name: 'Phoenix Sky Harbor International Airport' },
-  { code: 'SEA', name: 'Seattle–Tacoma International Airport' },
-  { code: 'SFO', name: 'San Francisco International Airport' },
-  { code: 'DEN', name: 'Denver International Airport' },
-  { code: 'ATL', name: 'Hartsfield–Jackson Atlanta International Airport' },
-  { code: 'MIA', name: 'Miami International Airport' },
-  { code: 'BOS', name: 'Logan International Airport' },
-  { code: 'IAD', name: 'Washington Dulles International Airport' },
-  { code: 'YYZ', name: 'Toronto Pearson International Airport' },
-  { code: 'YVR', name: 'Vancouver International Airport' },
-  { code: 'YUL', name: 'Montréal–Trudeau International Airport' },
-  { code: 'SYD', name: 'Sydney Kingsford Smith Airport' },
-  { code: 'MEL', name: 'Melbourne Airport' },
-  { code: 'BNE', name: 'Brisbane Airport' },
-  { code: 'AKL', name: 'Auckland Airport' },
-  { code: 'WLG', name: 'Wellington International Airport' },
-  { code: 'CHC', name: 'Christchurch International Airport' },
-  { code: 'ADL', name: 'Adelaide Airport' },
-  { code: 'PER', name: 'Perth Airport' },
-  { code: 'DRW', name: 'Darwin International Airport' },
-  { code: 'OOL', name: 'Gold Coast Airport' },
-  { code: 'HBA', name: 'Hobart International Airport' },
-  { code: 'TSV', name: 'Townsville Airport' },
-  { code: 'CNS', name: 'Cairns Airport' },
-  { code: 'KIX', name: 'Kansai International Airport' },
-  { code: 'KUN', name: 'Kunming Changshui International Airport' },
-  { code: 'PVG', name: 'Shanghai Pudong International Airport' },
-  { code: 'PEK', name: 'Beijing Capital International Airport' },
-  { code: 'CAN', name: 'Guangzhou Baiyun International Airport' },
-  { code: 'CTU', name: 'Chengdu Shuangliu International Airport' },
-  { code: 'SHA', name: 'Shanghai Hongqiao International Airport' },
-  { code: 'HGH', name: 'Hangzhou Xiaoshan International Airport' },
-  { code: 'SZX', name: 'Shenzhen Bao’an International Airport' },
-  { code: 'XIY', name: 'Xi’an Xianyang International Airport' },
-  { code: 'CKG', name: 'Chongqing Jiangbei International Airport' },
-  { code: 'NKG', name: 'Nanjing Lukou International Airport' },
-  { code: 'WUH', name: 'Wuhan Tianhe International Airport' },
-  { code: 'TAO', name: 'Qingdao Liuting International Airport' },
-  { code: 'HAK', name: 'Haikou Meilan International Airport' },
-  { code: 'XMN', name: 'Xiamen Gaoqi International Airport' },
-  { code: 'FOC', name: 'Fuzhou Changle International Airport' },
-  { code: 'KWE', name: 'Guiyang Longdongbao International Airport' },
-  { code: 'DLC', name: 'Dalian Zhoushuizi International Airport' },
-  { code: 'CGO', name: 'Zhengzhou Xinzheng International Airport' },
-  { code: 'HRB', name: 'Harbin Taiping International Airport' },
-  { code: 'SHE', name: 'Shenyang Taoxian International Airport' },
-  { code: 'TNA', name: 'Jinan Yaoqiang International Airport' },
-  { code: 'YNT', name: 'Yantai Penglai International Airport' },
-  { code: 'HFE', name: 'Hefei Xinqiao International Airport' },
-  { code: 'NGB', name: 'Ningbo Lishe International Airport' },
-  { code: 'LYG', name: 'Lianyungang Baitabu Airport' },
-  { code: 'WUX', name: 'Wuxi Sunan Shuofang International Airport' },
-  { code: 'ZUH', name: 'Zhuhai Jinwan Airport' },
-  { code: 'SJW', name: 'Shijiazhuang Zhengding International Airport' },
-  { code: 'TYN', name: 'Taiyuan Wusu International Airport' },
-  { code: 'CGQ', name: 'Changchun Longjia International Airport' },
-  { code: 'DYG', name: 'Dayong Airport' },
-  { code: 'LYI', name: 'Linyi Qufu Airport' },
-  { code: 'JMU', name: 'Jiamusi Dongjiao Airport' },
-  { code: 'YCU', name: 'Yichun Mingyueshan Airport' },
-  { code: 'JGN', name: 'Jinggangshan Airport' },
-  { code: 'WDS', name: 'Wudangshan Airport' },
-  { code: 'JNZ', name: 'Jinzhou Xiaolingzi Airport' },
-  { code: 'YIH', name: 'Yichang Sanxia Airport' },
-  { code: 'XIL', name: 'Xilinhot Airport' },
-  { code: 'HLD', name: 'Hailar Dongshan Airport' },
-  { code: 'BAV', name: 'Baotou Erliban Airport' },
-  { code: 'HLH', name: 'Hulunbuir Hailar Airport' },
-  { code: 'DSN', name: 'Datong Yungang Airport' },
-  { code: 'TGO', name: 'Tongliao Naoqi Airport' },
-  { code: 'ZHY', name: 'Zhanjiang Wuchuan Airport' },
-  { code: 'LYA', name: 'Luoyang Beijiao Airport' },
-  { code: 'JGS', name: 'Jiagedaqi Airport' },
-  { code: 'YCU', name: 'Yushu Batang Airport' },
-  { code: 'KRY', name: 'Korla Airport' },
-  { code: 'HMI', name: 'Hami Airport' },
-  { code: 'WUA', name: 'Wuhai Airport' },
-  { code: 'KCA', name: 'Karamay Airport' },
-  { code: 'IQM', name: 'Yining Airport' },
-  { code: 'TGO', name: 'Tacheng Airport' },
-  { code: 'AAT', name: 'Altay Airport' },
-  { code: 'KHG', name: 'Kashgar Airport' },
-  { code: 'YIN', name: 'Yining Airport' },
-  { code: 'ZHY', name: 'Zhanjiang Wuchuan Airport' },
-  { code:'DMK', name: 'Don Mueang International Airport' },
-  { code: 'CNX', name: 'Chiang Mai International Airport' },
-  { code: 'KBV', name: 'Krabi International Airport' },
-  { code: 'URT', name: 'Udon Thani International Airport' },
-  { code: 'HDY', name: 'Hat Yai International Airport' },
-  { code: 'HKT', name: 'Phuket International Airport' },
-  { code: 'CEI', name: 'Chiang Rai International Airport' },
-  { code: 'KKC', name: 'Khon Kaen Airport' },
-  { code: 'NST', name: 'Nakhon Si Thammarat Airport' },
-  { code: 'UBP', name: 'Ubon Ratchathani Airport' },
-  { code: 'NAW', name: 'Narathiwat Airport' },
-  { code: 'PHS', name: 'Phitsanulok Airport' },
-  { code: 'PYY', name: 'Pai Airport' },
+// const airportOptions = airports.map((airport) => ({
+//   value: airport.code,
+//   label: `${airport.name} (${airport.code})`,
+// }));
+const airportOptions = [
+  { value: 'KUL', label: 'Kuala Lumpur International Airport (KUL)' },
+  { value: 'NRT', label: 'Narita International Airport (NRT)' },
+  { value: 'SIN', label: 'Changi Airport (SIN)' },
+  { value: 'PEN', label: 'Penang International Airport (PEN)' },
+  { value: 'HND', label: 'Haneda Airport (HND)' },
+  { value: 'BKK', label: 'Suvarnabhumi Airport (BKK)' },
+  { value: 'HKG', label: 'Hong Kong International Airport (HKG)' },
+  { value: 'ICN', label: 'Incheon International Airport (ICN)' },
+  { value: 'MNL', label: 'Ninoy Aquino International Airport (MNL)' },
+  { value: 'CGK', label: 'Soekarno–Hatta International Airport (CGK)' },
+  { value: 'DPS', label: 'Ngurah Rai International Airport (DPS)' },
+  { value: 'BOM', label: 'Chhatrapati Shivaji Maharaj International Airport (BOM)' },
+  { value: 'DEL', label: 'Indira Gandhi International Airport (DEL)' },
+  { value: 'DOH', label: 'Hamad International Airport (DOH)' },
+  { value: 'DXB', label: 'Dubai International Airport (DXB)' },
+  { value: 'CDG', label: 'Charles de Gaulle Airport (CDG)' },
+  { value: 'JFK', label: 'John F. Kennedy International Airport (JFK)' },
+  { value: 'LHR', label: 'London Heathrow Airport (LHR)' },
+  { value: 'LAX', label: 'Los Angeles International Airport (LAX)' },
+  { value: 'ORD', label: 'O’Hare International Airport (ORD)' },
+  { value: 'FRA', label: 'Frankfurt Airport (FRA)' },
+  { value: 'AMS', label: 'Amsterdam Airport Schiphol (AMS)' },
+  { value: 'MAD', label: 'Adolfo Suárez Madrid–Barajas Airport (MAD)' },
+  { value: 'BCN', label: 'Barcelona–El Prat Airport (BCN)' },
+  { value: 'ZRH', label: 'Zurich Airport (ZRH)' },
+  { value: 'VIE', label: 'Vienna International Airport (VIE)' },
+  { value: 'IST', label: 'Istanbul Airport (IST)' },
+  { value: 'TLV', label: 'Ben Gurion Airport (TLV)' },
+  { value: 'CAI', label: 'Cairo International Airport (CAI)' },
+  { value: 'RUH', label: 'King Khalid International Airport (RUH)' },
+  { value: 'JED', label: 'King Abdulaziz International Airport (JED)' },
+  { value: 'KWI', label: 'Kuwait International Airport (KWI)' },
+  { value: 'MCT', label: 'Muscat International Airport (MCT)' },
+  { value: 'BAH', label: 'Bahrain International Airport (BAH)' },
+  { value: 'KTM', label: 'Tribhuvan International Airport (KTM)' },
+  { value: 'DAC', label: 'Hazrat Shahjalal International Airport (DAC)' },
+  { value: 'CMB', label: 'Bandaranaike International Airport (CMB)' },
+  { value: 'MLE', label: 'Velana International Airport (MLE)' },
+  { value: 'PNH', label: 'Phnom Penh International Airport (PNH)' },
+  { value: 'REP', label: 'Siem Reap International Airport (REP)' },
+  { value: 'SGN', label: 'Tan Son Nhat International Airport (SGN)' },
+  { value: 'HAN', label: 'Noi Bai International Airport (HAN)' },
+  { value: 'DAD', label: 'Da Nang International Airport (DAD)' },
+  { value: 'HUI', label: 'Phu Bai International Airport (HUI)' },
+  { value: 'KOS', label: 'Sihanoukville International Airport (KOS)' },
+  { value: 'LPQ', label: 'Luang Prabang International Airport (LPQ)' },
+  { value: 'VTE', label: 'Wattay International Airport (VTE)' },
+  { value: 'RNO', label: 'Reno-Tahoe International Airport (RNO)' },
+  { value: 'LAS', label: 'McCarran International Airport (LAS)' },
+  { value: 'PHX', label: 'Phoenix Sky Harbor International Airport (PHX)' },
+  { value: 'SEA', label: 'Seattle–Tacoma International Airport (SEA)' },
+  { value: 'SFO', label: 'San Francisco International Airport (SFO)' },
+  { value: 'DEN', label: 'Denver International Airport (DEN)' },
+  { value: 'ATL', label: 'Hartsfield–Jackson Atlanta International Airport (ATL)' },
+  { value: 'MIA', label: 'Miami International Airport (MIA)' },
+  { value: 'BOS', label: 'Logan International Airport (BOS)' },
+  { value: 'IAD', label: 'Washington Dulles International Airport (IAD)' },
+  { value: 'YYZ', label: 'Toronto Pearson International Airport (YYZ)' },
+  { value: 'YVR', label: 'Vancouver International Airport (YVR)' },
+  { value: 'YUL', label: 'Montréal–Trudeau International Airport (YUL)' },
+  { value: 'SYD', label: 'Sydney Kingsford Smith Airport (SYD)' },
+  { value: 'MEL', label: 'Melbourne Airport (MEL)' },
+  { value: 'BNE', label: 'Brisbane Airport (BNE)' },
+  { value: 'AKL', label: 'Auckland Airport (AKL)' },
+  { value: 'WLG', label: 'Wellington International Airport (WLG)' },
+  { value: 'CHC', label: 'Christchurch International Airport (CHC)' },
+  { value: 'ADL', label: 'Adelaide Airport (ADL)' },
+  { value: 'PER', label: 'Perth Airport (PER)' },
+  { value: 'DRW', label: 'Darwin International Airport (DRW)' },
+  { value: 'OOL', label: 'Gold Coast Airport (OOL)' },
+  { value: 'HBA', label: 'Hobart International Airport (HBA)' },
+  { value: 'TSV', label: 'Townsville Airport (TSV)' },
+  { value: 'CNS', label: 'Cairns Airport (CNS)' },
+  { value: 'KIX', label: 'Kansai International Airport (KIX)' },
+  { value: 'KUN', label: 'Kunming Changshui International Airport (KUN)' },
+  { value: 'PVG', label: 'Shanghai Pudong International Airport (PVG)' },
+  { value: 'PEK', label: 'Beijing Capital International Airport (PEK)' },
+  { value: 'CAN', label: 'Guangzhou Baiyun International Airport (CAN)' },
+  { value: 'CTU', label: 'Chengdu Shuangliu International Airport (CTU)' },
+  { value: 'SHA', label: 'Shanghai Hongqiao International Airport (SHA)' },
+  { value: 'HGH', label: 'Hangzhou Xiaoshan International Airport (HGH)' },
+  { value: 'SZX', label: 'Shenzhen Bao’an International Airport (SZX)' },
+  { value: 'XIY', label: 'Xi’an Xianyang International Airport (XIY)' },
+  { value: 'CKG', label: 'Chongqing Jiangbei International Airport (CKG)' },
+  { value: 'NKG', label: 'Nanjing Lukou International Airport (NKG)' },
+  { value: 'WUH', label: 'Wuhan Tianhe International Airport (WUH)' },
+  { value: 'TAO', label: 'Qingdao Liuting International Airport (TAO)' },
+  { value: 'HAK', label: 'Haikou Meilan International Airport (HAK)' },
+  { value: 'XMN', label: 'Xiamen Gaoqi International Airport (XMN)' },
+  { value: 'FOC', label: 'Fuzhou Changle International Airport (FOC)' },
+  { value: 'KWE', label: 'Guiyang Longdongbao International Airport (KWE)' },
+  { value: 'DLC', label: 'Dalian Zhoushuizi International Airport (DLC)' },
+  { value: 'CGO', label: 'Zhengzhou Xinzheng International Airport (CGO)' },
+  { value: 'HRB', label: 'Harbin Taiping International Airport (HRB)' },
+  { value: 'SHE', label: 'Shenyang Taoxian International Airport (SHE)' },
+  { value: 'TNA', label: 'Jinan Yaoqiang International Airport (TNA)' },
+  { value: 'YNT', label: 'Yantai Penglai International Airport (YNT)' },
+  { value: 'HFE', label: 'Hefei Xinqiao International Airport (HFE)' },
+  { value: 'NGB', label: 'Ningbo Lishe International Airport (NGB)' },
+  { value: 'LYG', label: 'Lianyungang Baitabu Airport (LYG)' },
+  { value: 'WUX', label: 'Wuxi Sunan Shuofang International Airport (WUX)' },
+  { value: 'ZUH', label: 'Zhuhai Jinwan Airport (ZUH)' },
+  { value: 'SJW', label: 'Shijiazhuang Zhengding International Airport (SJW)' },
+  { value: 'TYN', label: 'Taiyuan Wusu International Airport (TYN)' },
+  { value: 'CGQ', label: 'Changchun Longjia International Airport (CGQ)' },
+  { value: 'DYG', label: 'Dayong Airport (DYG)' },
+  { value: 'LYI', label: 'Linyi Qufu Airport (LYI)' },
+  { value: 'JMU', label: 'Jiamusi Dongjiao Airport (JMU)' },
+  { value: 'YCU', label: 'Yichun Mingyueshan Airport (YCU)' },
+  { value: 'JGN', label: 'Jinggangshan Airport (JGN)' },
+  { value: 'WDS', label: 'Wudangshan Airport (WDS)' },
+  { value: 'JNZ', label: 'Jinzhou Xiaolingzi Airport (JNZ)' },
+  { value: 'YIH', label: 'Yichang Sanxia Airport (YIH)' },
+  { value: 'XIL', label: 'Xilinhot Airport (XIL)' },
+  { value: 'HLD', label: 'Hailar Dongshan Airport (HLD)' },
+  { value: 'BAV', label: 'Baotou Erliban Airport (BAV)' },
+  { value: 'HLH', label: 'Hulunbuir Hailar Airport (HLH)' },
+  { value: 'DSN', label: 'Datong Yungang Airport (DSN)' },
+  { value: 'TGO', label: 'Tongliao Naoqi Airport (TGO)' },
+  { value: 'ZHY', label: 'Zhanjiang Wuchuan Airport (ZHY)' },
+  { value: 'LYA', label: 'Luoyang Beijiao Airport (LYA)' },
+  { value: 'JGS', label: 'Jiagedaqi Airport (JGS)' },
+  { value: 'YCU', label: 'Yushu Batang Airport (YCU)' },
+  { value: 'KRY', label: 'Korla Airport (KRY)' },
+  { value: 'HMI', label: 'Hami Airport (HMI)' },
+  { value: 'WUA', label: 'Wuhai Airport (WUA)' },
+  { value: 'KCA', label: 'Karamay Airport (KCA)' },
+  { value: 'IQM', label: 'Yining Airport (IQM)' },
+  { value: 'TGO', label: 'Tacheng Airport (TGO)' },
+  { value: 'AAT', label: 'Altay Airport (AAT)' },
+  { value: 'KHG', label: 'Kashgar Airport (KHG)' },
+  { value: 'YIN', label: 'Yining Airport (YIN)' },
+  { value: 'ZHY', label: 'Zhanjiang Wuchuan Airport (ZHY)' },
+  { value: 'DMK', label: 'Don Mueang International Airport (DMK)' },
+  { value: 'CNX', label: 'Chiang Mai International Airport (CNX)' },
+  { value: 'KBV', label: 'Krabi International Airport (KBV)' },
+  { value: 'URT', label: 'Udon Thani International Airport (URT)' },
+  { value: 'HDY', label: 'Hat Yai International Airport (HDY)' },
+  { value: 'HKT', label: 'Phuket International Airport (HKT)' },
+  { value: 'CEI', label: 'Chiang Rai International Airport (CEI)' },
+  { value: 'KKC', label: 'Khon Kaen Airport (KKC)' },
+  { value: 'NST', label: 'Nakhon Si Thammarat Airport (NST)' },
+  { value: 'UBP', label: 'Ubon Ratchathani Airport (UBP)' },
+  { value: 'NAW', label: 'Narathiwat Airport (NAW)' },
+  { value: 'PHS', label: 'Phitsanulok Airport (PHS)' },
+  { value: 'PYY', label: 'Pai Airport (PYY)' },
 ];
-
-const airportOptions = airports.map((airport) => ({
-  value: airport.code,
-  label: `${airport.name} (${airport.code})`,
-}));
 
 const travelClassOptions = [
   { value: 'ECONOMY', label: 'Economy' },
@@ -205,6 +201,51 @@ const FlightSearch: React.FC = () => {
 
   const navigate = useNavigate();
 
+  // Load cached values
+  useEffect(() => {
+    const cached = sessionStorage.getItem('flightSearchResults');
+    if (cached) setFlights(JSON.parse(cached));
+
+    const cachedOrigin = sessionStorage.getItem('origin');
+    const cachedDestination = sessionStorage.getItem('destination');
+    const cachedDepartureDate = sessionStorage.getItem('departureDate');
+    const cachedReturnDate = sessionStorage.getItem('returnDate');
+    const cachedPassengers = sessionStorage.getItem('passengers');
+    const cachedTravelClass = sessionStorage.getItem('travelClass');
+
+    if (cachedOrigin) setOrigin(cachedOrigin);
+    if (cachedDestination) setDestination(cachedDestination);
+    if (cachedDepartureDate) setDepartureDate(cachedDepartureDate);
+    if (cachedReturnDate) setReturnDate(cachedReturnDate);
+    if (cachedPassengers) setPassengers(cachedPassengers);
+    if (cachedTravelClass) setTravelClass(cachedTravelClass);
+  }, []);
+
+  // Sync state with sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('origin', origin);
+  }, [origin]);
+
+  useEffect(() => {
+    sessionStorage.setItem('destination', destination);
+  }, [destination]);
+
+  useEffect(() => {
+    sessionStorage.setItem('departureDate', departureDate);
+  }, [departureDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem('returnDate', returnDate);
+  }, [returnDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem('passengers', passengers);
+  }, [passengers]);
+
+  useEffect(() => {
+    sessionStorage.setItem('travelClass', travelClass);
+  }, [travelClass]);
+
   const searchFlights = async () => {
     setLoading(true);
     setError('');
@@ -222,6 +263,7 @@ const FlightSearch: React.FC = () => {
       if (!response.ok) throw new Error('Flight search failed');
       const data = await response.json();
       setFlights(data.data || []);
+      sessionStorage.setItem('flightSearchResults', JSON.stringify(data.data || []));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -239,7 +281,7 @@ const FlightSearch: React.FC = () => {
           placeholder="Select or type Origin"
           value={
             origin
-              ? { value: origin, label: airportOptions.find((opt) => opt.value === origin)?.label || origin }
+              ? airportOptions.find((opt) => opt.value === origin) || { value: origin, label: origin }
               : null
           }
           onChange={(opt) => setOrigin(opt?.value || '')}
@@ -253,32 +295,32 @@ const FlightSearch: React.FC = () => {
           placeholder="Select or type Destination"
           value={
             destination
-              ? { value: destination, label: airportOptions.find((opt) => opt.value === destination)?.label || destination }
+              ? airportOptions.find((opt) => opt.value === destination) || { value: destination, label: destination }
               : null
           }
           onChange={(opt) => setDestination(opt?.value || '')}
           styles={{ container: (base) => ({ ...base, width: 250 }) }}
           isClearable
           formatCreateLabel={(inputValue) => `Use code: ${inputValue}`}
-        />  
+        />
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <label htmlFor="departure-date" style={{ marginBottom: 4 }}>Departure Date</label>
           <input
-        id="departure-date"
-        type="date"
-        value={departureDate}
-        onChange={(e) => setDepartureDate(e.target.value)}
+            id="departure-date"
+            type="date"
+            value={departureDate}
+            onChange={(e) => setDepartureDate(e.target.value)}
           />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <label htmlFor="return-date" style={{ marginBottom: 4 }}>Return Date</label>
           <input
-        id="return-date"
-        type="date"
-        value={returnDate}
-        onChange={(e) => setReturnDate(e.target.value)}
+            id="return-date"
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
           />
         </div>
 
@@ -306,76 +348,60 @@ const FlightSearch: React.FC = () => {
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <div>
-  {flights.length > 0 ? (
-    flights.map((flight) => (
-      <div key={flight.id} style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
-  <p><strong>Price:</strong> MYR {flight.price.total}</p>
+        {flights.length > 0 ? (
+          flights.map((flight) => (
+            <div key={flight.id} style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
+              <p><strong>Price:</strong> MYR {flight.price.total}</p>
+              {flight.itineraries.map((itinerary, idx) => (
+                <div key={idx}>
+                  <p><strong>Segments:</strong></p>
+                  {itinerary.segments.map((seg, index) => {
+                    const departureTime = new Date(seg.departure.at);
+                    const arrivalTime = new Date(seg.arrival.at);
 
-  <>
-    {flight.itineraries.map((itinerary, idx) => (
-      <div key={idx}>
-        <p><strong>Segments:</strong></p>
-        {itinerary.segments.map((seg, index) => {
-          const departureTime = new Date(seg.departure.at);
-          const arrivalTime = new Date(seg.arrival.at);
+                    return (
+                      <div key={index} style={{ marginBottom: '0.5rem' }}>
+                        <p>✈️ <strong>{seg.departure.iataCode}</strong> ({departureTime.toLocaleString()}) → <strong>{seg.arrival.iataCode}</strong> ({arrivalTime.toLocaleString()})</p>
+                        <p>🏢 <strong>Airline:</strong> {seg.carriers} {seg.aircraft && `| Aircraft: ${seg.aircraft.code}`}</p>
+                        <p>⏱️ <strong>Duration:</strong> {seg.duration?.replace('PT', '').toLowerCase()}</p>
+                      </div>
+                    );
+                  })}
+                  {itinerary.segments.length > 1 &&
+                    itinerary.segments.slice(1).map((seg, i) => {
+                      const prevArrival = new Date(itinerary.segments[i].arrival.at);
+                      const nextDeparture = new Date(seg.departure.at);
+                      const layoverMinutes = Math.floor((nextDeparture.getTime() - prevArrival.getTime()) / 60000);
+                      const hours = Math.floor(layoverMinutes / 60);
+                      const minutes = layoverMinutes % 60;
+                      return (
+                        <p key={`layover-${i}`} style={{ color: 'gray', marginLeft: '1rem' }}>
+                          🕓 Layover: {hours}h {minutes}m at {itinerary.segments[i].arrival.iataCode}
+                        </p>
+                      );
+                    })}
+                </div>
+              ))}
 
-          return (
-            <div key={index} style={{ marginBottom: '0.5rem' }}>
-              <p>
-                ✈️ <strong>{seg.departure.iataCode}</strong> ({departureTime.toLocaleString()}) →{' '}
-                <strong>{seg.arrival.iataCode}</strong> ({arrivalTime.toLocaleString()})
-              </p>
-              <p>
-                🏢 <strong>Airline:</strong> {seg.carriers}
-                {seg.aircraft && ` | Aircraft: ${seg.aircraft.code}`}
-              </p>
-              <p>
-                ⏱️ <strong>Duration:</strong> {seg.duration?.replace('PT', '').toLowerCase()}
-              </p>
+              <button
+                onClick={() => navigate(`/flights/${flight.id}`, { state: { flight } })}
+                style={{ marginTop: '1rem' }}
+              >
+                View Details
+              </button>
+
+              {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight && (
+                <p>
+                  🧳 <strong>Baggage Allowance:</strong>{' '}
+                  {flight.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags.weight} kg
+                </p>
+              )}
             </div>
-          );
-        })}
-
-        {/* Layovers */}
-        {itinerary.segments.length > 1 &&
-          itinerary.segments.slice(1).map((seg, i) => {
-            const prevArrival = new Date(itinerary.segments[i].arrival.at);
-            const nextDeparture = new Date(seg.departure.at);
-            const layoverMinutes = Math.floor((nextDeparture.getTime() - prevArrival.getTime()) / 60000);
-            const hours = Math.floor(layoverMinutes / 60);
-            const minutes = layoverMinutes % 60;
-            return (
-              <p key={`layover-${i}`} style={{ color: 'gray', marginLeft: '1rem' }}>
-                🕓 Layover: {hours}h {minutes}m at {itinerary.segments[i].arrival.iataCode}
-              </p>
-            );
-          })}
+          ))
+        ) : (
+          !loading && <p>No flights found.</p>
+        )}
       </div>
-    ))}
-
-    <button
-      onClick={() => navigate(`/flights/${flight.id}`, { state: { flight } })}
-      style={{ marginTop: '1rem' }}
-    >
-      View Details
-    </button>
-  </>
-
-  {/* Baggage info */}
-  {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight && (
-    <p>
-      🧳 <strong>Baggage Allowance:</strong>{' '}
-      {flight.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags.weight} kg
-    </p>
-  )}
-</div>
-
-    ))
-  ) : (
-    !loading && <p>No flights found.</p>
-  )}
-</div>
-
     </div>
   );
 };
