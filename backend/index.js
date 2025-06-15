@@ -5,6 +5,7 @@ import { clerkMiddleware, requireAuth, getAuth, clerkClient } from '@clerk/expre
 import { db } from './lib/firebase.js';
 import bookingsRouter from './routes/bookings.js';
 import wishlistRouter from './routes/wishlist.js';
+//import flightsRouter from './routes/flights.js';
 import axios from 'axios';
 
 let amadeusAccessToken = '';
@@ -36,6 +37,7 @@ app.use(clerkMiddleware());
 
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/wishlist', wishlistRouter);
+//app.use('/api/flights', flightsRouter);
 
 app.get('/api/flights', async (req, res) => {
   let {
@@ -125,36 +127,36 @@ app.get('/api/flights', async (req, res) => {
   }
 });
 
-// Location search: airports or cities
-app.get('/api/locations', async (req, res) => {
-  const { keyword } = req.query;
+// // Location search: airports or cities
+// app.get('/api/locations', async (req, res) => {
+//   const { keyword } = req.query;
 
-  if (!keyword || keyword.length < 2) {
-    return res.status(400).json({ error: 'Keyword too short' });
-  }
+//   if (!keyword || keyword.length < 2) {
+//     return res.status(400).json({ error: 'Keyword too short' });
+//   }
 
-  try {
-    if (!amadeusAccessToken) {
-      await authenticateAmadeus();
-    }
+//   try {
+//     if (!amadeusAccessToken) {
+//       await authenticateAmadeus();
+//     }
 
-    const response = await axios.get('https://test.api.amadeus.com/v1/reference-data/locations', {
-      headers: {
-        Authorization: `Bearer ${amadeusAccessToken}`,
-      },
-      params: {
-        keyword,
-        subType: 'AIRPORT,CITY',
-        page: { limit: 10 }
-      },
-    });
+//     const response = await axios.get('https://test.api.amadeus.com/v1/reference-data/locations', {
+//       headers: {
+//         Authorization: `Bearer ${amadeusAccessToken}`,
+//       },
+//       params: {
+//         keyword,
+//         subType: 'AIRPORT,CITY',
+//         page: { limit: 10 }
+//       },
+//     });
 
-    res.json(response.data.data || []);
-  } catch (error) {
-    console.error('❌ Location search failed:', error.message);
-    res.status(500).json({ error: 'Location search failed' });
-  }
-});
+//     res.json(response.data.data || []);
+//   } catch (error) {
+//     console.error('❌ Location search failed:', error.message);
+//     res.status(500).json({ error: 'Location search failed' });
+//   }
+// });
 
 
 // ✅ Public test route (does NOT require login)

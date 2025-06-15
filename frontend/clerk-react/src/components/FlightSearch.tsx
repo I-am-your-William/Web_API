@@ -23,6 +23,49 @@ interface FlightOffer {
   }[];
 }
 
+// interface FlightOffer {
+//   id: string;
+//   price: {
+//     total: string;
+//   };
+//   itineraries: {
+//     segments: {
+//       departure: {
+//         iataCode: string;
+//         at: string;
+//       };
+//       arrival: {
+//         iataCode: string;
+//         at: string;
+//       };
+//       carrierCode: string; // added explicitly if needed
+//       aircraft?: {
+//         code: string;
+//       };
+//       duration?: string;
+//     }[];
+//   }[];
+//   travelerPricings?: {
+//     fareDetailsBySegment?: {
+//       includedCheckedBags?: {
+//         weight?: number;
+//         quantity?: number;
+//       };
+//     }[];
+//   }[];
+//   airlineCodes: {
+//     code: string;
+//     name: string;
+//   }[];
+//   aircraftCodes: {
+//     code: string;
+//     name: string;
+//   }[];
+//   layovers: string[];
+//   baggageAllowances: number[];
+// }
+
+
 // const airportOptions = airports.map((airport) => ({
 //   value: airport.code,
 //   label: `${airport.name} (${airport.code})`,
@@ -347,36 +390,79 @@ const FlightSearch: React.FC = () => {
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      <div>
+      <div className="flights-container">
         {flights.length > 0 ? (
           flights.map((flight) => (
-            <div key={flight.id} style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
-              <p><strong>Price:</strong> MYR {flight.price.total}</p>
+            <div
+              key={flight.id}
+              style={{
+                border: '1px solid #ddd',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                backgroundColor: '#fff',
+              }}
+            >
+              <p style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '1rem' }}>
+                💰 Price: MYR {flight.price.total}
+              </p>
+
               {flight.itineraries.map((itinerary, idx) => (
                 <div key={idx}>
-                  <p><strong>Segments:</strong></p>
+                  <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🛫 Segments:</p>
                   {itinerary.segments.map((seg, index) => {
                     const departureTime = new Date(seg.departure.at);
                     const arrivalTime = new Date(seg.arrival.at);
 
+                    // These fields may not exist in your FlightOffer type/data, so fallback to code if not present
+                    // @ts-ignore
+                    const airlineName =
+                      // @ts-ignore
+                      flight.airlineCodes?.find?.((a) => a.code === seg.carrierCode)?.name || seg.carrierCode || seg.carriers;
+
+                    // @ts-ignore
+                    const aircraftName =
+                      seg.aircraft?.code &&
+                      // @ts-ignore
+                      flight.aircraftCodes?.find?.((a) => a.code === seg.aircraft.code)?.name;
+
                     return (
-                      <div key={index} style={{ marginBottom: '0.5rem' }}>
-                        <p>✈️ <strong>{seg.departure.iataCode}</strong> ({departureTime.toLocaleString()}) → <strong>{seg.arrival.iataCode}</strong> ({arrivalTime.toLocaleString()})</p>
-                        <p>🏢 <strong>Airline:</strong> {seg.carriers} {seg.aircraft && `| Aircraft: ${seg.aircraft.code}`}</p>
-                        <p>⏱️ <strong>Duration:</strong> {seg.duration?.replace('PT', '').toLowerCase()}</p>
+                      <div key={index} style={{ marginBottom: '1rem' }}>
+                        <p>
+                          ✈️ <strong>{seg.departure.iataCode}</strong> ({departureTime.toLocaleString()}) →{' '}
+                          <strong>{seg.arrival.iataCode}</strong> ({arrivalTime.toLocaleString()})
+                        </p>
+                        <p>
+                          🏢 <strong>Airline:</strong> {airlineName}
+                          {aircraftName
+                          ? ` | ✈️ Aircraft: ${aircraftName} (${seg.aircraft?.code})`
+                          : seg.aircraft?.code
+                          ? ` | ✈️ Aircraft Code: ${seg.aircraft.code}`
+                          : ''}
+                        </p>
+                        <p>
+                          ⏱️ <strong>Duration:</strong>{' '}
+                          {seg.duration?.replace('PT', '').toLowerCase()}
+                        </p>
                       </div>
                     );
                   })}
+
                   {itinerary.segments.length > 1 &&
                     itinerary.segments.slice(1).map((seg, i) => {
                       const prevArrival = new Date(itinerary.segments[i].arrival.at);
                       const nextDeparture = new Date(seg.departure.at);
-                      const layoverMinutes = Math.floor((nextDeparture.getTime() - prevArrival.getTime()) / 60000);
+                      const layoverMinutes = Math.floor(
+                        (nextDeparture.getTime() - prevArrival.getTime()) / 60000
+                      );
                       const hours = Math.floor(layoverMinutes / 60);
                       const minutes = layoverMinutes % 60;
+
                       return (
                         <p key={`layover-${i}`} style={{ color: 'gray', marginLeft: '1rem' }}>
-                          🕓 Layover: {hours}h {minutes}m at {itinerary.segments[i].arrival.iataCode}
+                          🕓 Layover: {hours}h {minutes}m at{' '}
+                          {itinerary.segments[i].arrival.iataCode}
                         </p>
                       );
                     })}
@@ -385,13 +471,21 @@ const FlightSearch: React.FC = () => {
 
               <button
                 onClick={() => navigate(`/flights/${flight.id}`, { state: { flight } })}
-                style={{ marginTop: '1rem' }}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px',
+                  backgroundColor: '#007bff',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
               >
                 View Details
               </button>
 
               {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight && (
-                <p>
+                <p style={{ marginTop: '0.8rem' }}>
                   🧳 <strong>Baggage Allowance:</strong>{' '}
                   {flight.travelerPricings[0].fareDetailsBySegment[0].includedCheckedBags.weight} kg
                 </p>
@@ -404,6 +498,6 @@ const FlightSearch: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default FlightSearch;

@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/flights" element={<FlightSearch />} />
             <Route path="/flights/:id" element={<FlightDetails />} />
             <Route path="/bookings" element={<MyBooking />} />
-            <Route path="/view-details" element={<ViewDetails />} />
+            <Route path="/view-booking/:id" element={<ViewDetails />} />
             <Route path="*" element={<p>404 - Page Not Found</p>} />
           </Routes>
         </main>

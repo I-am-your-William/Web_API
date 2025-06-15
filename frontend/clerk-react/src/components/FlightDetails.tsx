@@ -38,8 +38,9 @@ const FlightDetails: React.FC = () => {
   }, [id, flight]);
 
   const handlePassengerCountChange = (count: number) => {
-    setNumPassengers(count);
-    const newDetails = Array.from({ length: count }, (_, i) => passengerDetails[i] || { name: '', gender: '', birthday: '' });
+    const validCount = Math.min(count, 9);
+    setNumPassengers(validCount);
+    const newDetails = Array.from({ length: validCount }, (_, i) => passengerDetails[i] || { name: '', gender: '', birthday: '' });
     setPassengerDetails(newDetails);
   };
 
@@ -116,7 +117,7 @@ const FlightDetails: React.FC = () => {
                 <strong>From:</strong> {seg.departure.iataCode} at {departureTime.toLocaleString()}<br />
                 <strong>To:</strong> {seg.arrival.iataCode} at {arrivalTime.toLocaleString()}<br />
                 <strong>Flight Duration:</strong> {seg.duration.replace('PT', '').toLowerCase()}<br />
-                <strong>Carrier:</strong> {seg.carrierCode}<br />
+                <strong>Airline Code:</strong> {seg.carrierCode}<br />
                 {seg.aircraft && <><strong>Aircraft:</strong> {seg.aircraft?.code}</>}
               </p>
               {i > 0 && (() => {
@@ -140,6 +141,9 @@ const FlightDetails: React.FC = () => {
   if (loading) return <p>Loading flight details...</p>;
   if (error || !flight) return <p>{error || 'Flight details not available.'}</p>;
 
+  const perPassengerPrice = parseFloat(flight.price?.total || '0');
+  const totalPrice = (perPassengerPrice * numPassengers).toFixed(2);
+
   return (
     <div style={{ display: 'flex', padding: '2rem', gap: '2rem', alignItems: 'flex-start' }}>
       {/* Left: Flight Details */}
@@ -151,8 +155,10 @@ const FlightDetails: React.FC = () => {
           renderItinerary(itinerary, idx, idx === 0 ? 'Departure' : 'Return')
         )}
 
-        <p><strong>Airline:</strong> {flight.validatingAirlineCodes?.[0]}</p>
-        <p><strong>Total Price:</strong> MYR {flight.price?.total}</p>
+        {/* Airline Info */}
+        {/* <p><strong>Airline:</strong> {flight.validatingAirlineCodes?.[0]}</p> */}
+        <p><strong>Price per Passenger:</strong> MYR {perPassengerPrice.toFixed(2)}</p>
+        <p><strong>Total Price for {numPassengers} Passenger{numPassengers > 1 ? 's' : ''}:</strong> MYR {totalPrice}</p>
       </div>
 
       {/* Right: Passenger Booking Panel */}
@@ -170,10 +176,12 @@ const FlightDetails: React.FC = () => {
         <input
           type="number"
           min={1}
+          max={9}
           value={numPassengers}
           onChange={(e) => handlePassengerCountChange(Number(e.target.value))}
-          style={{ width: '60px', marginBottom: '1rem' }}
-        />
+          style={{ width: '60px', marginBottom: '0.5rem' }}
+        /><br />
+        <small style={{ color: 'gray' }}>Max 9 passengers allowed</small>
 
         {passengerDetails.map((passenger, idx) => (
           <div key={idx} style={{ marginBottom: '1rem' }}>
@@ -258,6 +266,7 @@ const FlightDetails: React.FC = () => {
 };
 
 export default FlightDetails;
+
 
 
 // import React, { useEffect, useState } from 'react';

@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react"
-import { useAuth } from "@clerk/clerk-react"
-// import jsPDF from "jspdf";
-// import html2canvas from "html2canvas";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
 
 type Segment = {
-  departure: { iataCode: string; at: string }
-  arrival: { iataCode: string; at: string }
-  number: string
-  duration: string
-}
+  departure: { iataCode: string; at: string };
+  arrival: { iataCode: string; at: string };
+  number: string;
+  duration: string;
+};
 
 type Passenger = {
   name: string;
@@ -31,157 +30,113 @@ type Booking = {
     duration: string;
   }[];
   airlineCodes: string[];
-  passengers: Passenger[]; // ✅ Add this line
+  passengers: Passenger[];
 };
 
-// type Booking = {
-//   bookingId: string
-//   createdAt: string
-//   price: {
-//     base: string
-//     total: string
-//     grandTotal: string
-//     currency: string
-//   }
-//   baggageAllowances: number[]
-//   itineraries: {
-//     segments: Segment[]
-//     duration: string
-//   }[]
-//   airlineCodes: string[]
-// }
-
-export default function MyBookingPage() {
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const { userId, isLoaded, getToken } = useAuth()
-  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
-
+export default function ViewBookingPage() {
+  const { state } = useLocation();
+  const { id } = useParams();
+  const [booking, setBooking] = useState<Booking | null>(state?.booking ?? null);
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoaded || !userId) return;
+    if (booking || !id) return;
 
-    const fetchBookings = async () => {
+    const fetchSingleBooking = async () => {
       try {
         const token = await getToken();
-        const response = await fetch("http://localhost:5000/api/bookings", {
+        const response = await fetch(`http://localhost:5000/api/bookings/${id}`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
             "Content-Type": "application/json"
           }
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Fetch failed: ${response.status} - ${errorText}`);
-        }
-
-        const rawBookings = await response.json();
-
-        // // Map flightDetails into Booking structure
-        // const normalizedBookings: Booking[] = rawBookings.map((b: any) => ({
-        //   bookingId: b.bookingId,
-        //   createdAt: b.createdAt,
-        //   price: b.flightDetails.price,
-        //   baggageAllowances: b.flightDetails.baggageAllowances,
-        //   itineraries: b.flightDetails.itineraries,
-        //   airlineCodes: b.flightDetails.airlineCodes
-        // }));
-
-        const normalizedBookings: Booking[] = rawBookings.map((b: any) => ({
-          bookingId: b.bookingId,
-          createdAt: b.createdAt,
-          price: b.flightDetails.price,
-          baggageAllowances: b.flightDetails.baggageAllowances,
-          itineraries: b.flightDetails.itineraries,
-          airlineCodes: b.flightDetails.airlineCodes,
-          passengers: b.passengers // ✅ Add this line
-        }));
-
-        setBookings(normalizedBookings);
+        const raw = await response.json();
+        setBooking({
+          bookingId: raw.bookingId,
+          createdAt: raw.createdAt,
+          price: raw.flightDetails.price,
+          baggageAllowances: raw.flightDetails.baggageAllowances,
+          itineraries: raw.flightDetails.itineraries,
+          airlineCodes: raw.flightDetails.airlineCodes,
+          passengers: raw.passengers
+        });
       } catch (err: any) {
-        console.error("Error fetching bookings:", err.message);
+        console.error("Error fetching single booking:", err.message);
       }
     };
 
-    fetchBookings();
-  }, [isLoaded, userId, getToken]);
+    fetchSingleBooking();
+  }, [booking, id, getToken]);
 
-  if (!bookings.length) {
-    return <div>No bookings found.</div>;
-  }
+  if (!booking) return <div className="p-6 text-center">Loading booking...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 overflow-y-auto">
-      <div className="max-w-5xl mx-auto">
-        {bookings.map((booking: Booking) => {
-          const firstItinerary = booking.itineraries?.[0];
-          const firstSegment = firstItinerary?.segments?.[0];
-          const lastItinerary = booking.itineraries?.[booking.itineraries.length - 1];
-          const lastSegment = lastItinerary?.segments?.[lastItinerary.segments.length - 1];
+    <div className="p-6 max-w-6xl mx-auto font-sans">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-6 text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
+      >
+        ← Back to Bookings
+      </button>
 
-          if (!firstSegment || !lastSegment || !booking.price) return null;
+      {/* Header Card */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">Booking Summary</h1>
+        <div className="grid sm:grid-cols-2 gap-4 text-gray-700">
+          <p><strong>Booking ID:</strong> {booking.bookingId}</p>
+          <p><strong>Airline:</strong> {booking.airlineCodes.join(", ")}</p>
+          <p><strong>Total Price:</strong> {booking.price.currency} {booking.price.total}</p>
+          <p><strong>Created At:</strong> {new Date(booking.createdAt).toLocaleString()}</p>
+        </div>
+      </div>
 
-          return (
-            <div key={booking.bookingId} className="border rounded-lg p-6 shadow-sm bg-white mb-8">
-              <div className="mb-4">
-                <h2 className="text-xl font-semibold">Flight Ticket</h2>
-                <div className="mb-1 text-xs text-gray-500">Booking ID: {booking.bookingId}</div>
-                <p className="text-sm text-gray-600">Airline: {booking.airlineCodes?.join(", ")}</p>
+      {/* Content Layout */}
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Itineraries Section */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Flight Itinerary</h2>
+          {booking.itineraries.map((it, idx) => {
+            const first = it.segments[0];
+            const last = it.segments[it.segments.length - 1];
+            return (
+              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6 shadow-sm">
+                <h3 className="text-lg font-medium mb-3 text-gray-700">
+                  {idx === 0 ? "Outbound" : "Return"} Flight
+                </h3>
+                <ul className="space-y-1 text-sm text-gray-600">
+                  <li><strong>From:</strong> {first.departure.iataCode} — {new Date(first.departure.at).toLocaleString()}</li>
+                  <li><strong>To:</strong> {last.arrival.iataCode} — {new Date(last.arrival.at).toLocaleString()}</li>
+                  <li><strong>Flight No:</strong> {first.number}</li>
+                  <li><strong>Duration:</strong> {it.duration.replace("PT", "").toLowerCase()}</li>
+                  <li><strong>Baggage:</strong> {booking.baggageAllowances[idx] ?? "N/A"} kg</li>
+                </ul>
               </div>
+            );
+          })}
+        </div>
 
-              {booking.itineraries.map((itinerary, idx) => {
-                const firstSegment = itinerary.segments?.[0];
-                const lastSegment = itinerary.segments?.[itinerary.segments.length - 1];
-                if (!firstSegment || !lastSegment) return null;
-
-                return (
-                  <div key={idx} className="mb-6 border-t pt-4">
-                    <h2 className="text-lg font-semibold mb-2">Itinerary {idx + 1}</h2>
-                    <h3 className="text-md font-medium mb-2">
-                      {firstSegment.departure.iataCode} → {lastSegment.arrival.iataCode}
-                    </h3>
-                    <p><strong>Departure:</strong> {new Date(firstSegment.departure.at).toLocaleString()}</p>
-                    <p><strong>Arrival:</strong> {new Date(lastSegment.arrival.at).toLocaleString()}</p>
-                    <p><strong>Flight No:</strong> {firstSegment.number}</p>
-                    <p><strong>Duration:</strong> {itinerary.duration?.replace("PT", "").toLowerCase()}</p>
-                    <p><strong>Baggage:</strong> {booking.baggageAllowances?.[idx] ?? "N/A"} kg</p>
-                  </div>
-                );
-              })}
-
-              <div className="text-right md:text-left">
-                <p className="text-lg font-bold text-blue-600">
-                  {booking.price.currency} {booking.price.total}
-                </p>
-                <p className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                  Confirmed
-                </p>
-                <div className="mt-4">
-                  <button
-                    onClick={() => setExpandedTicket(booking.bookingId === expandedTicket ? null : booking.bookingId)}
-                    className="border border-blue-600 text-blue-600 px-4 py-2 rounded hover:bg-blue-600 hover:text-white transition"
-                  >
-                    {expandedTicket === booking.bookingId ? "Hide Ticket" : "View Ticket"}
-                  </button>
-
-                  {expandedTicket === booking.bookingId && (
-                    <div className="mt-6 border-t pt-4">
-                      <h3 className="text-md font-semibold mb-2">Passenger(s)</h3>
-                      {booking.passengers?.map((p, i) => (
-                        <div key={i} className="mb-2 text-sm">
-                          <p><strong>Name:</strong> {p.name}</p>
-                          <p><strong>Gender:</strong> {p.gender}</p>
-                          <p><strong>Birthday:</strong> {new Date(p.birthday).toLocaleDateString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+        {/* Passengers Section */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Passenger(s)</h2>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 shadow-sm">
+            {booking.passengers.map((p, i) => (
+              <div
+                key={i}
+                className="mb-4 pb-4 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0 text-sm text-gray-700"
+              >
+                <p><strong>Name:</strong> {p.name}</p>
+                <p><strong>Gender:</strong> {p.gender}</p>
+                <p><strong>Birthday:</strong> {new Date(p.birthday).toLocaleDateString()}</p>
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
