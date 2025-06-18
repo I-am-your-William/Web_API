@@ -1,8 +1,3 @@
-<<<<<<< Updated upstream
-// src/App.tsx
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import FirebaseTest from './components/firebasetest';
-=======
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,31 +10,9 @@ import FlightDetails from "@/pages/FlightDetails";
 import MyBooking from "@/pages/MyBooking";
 import ViewBooking from "@/pages/ViewBooking";
 import NotFound from "@/pages/not-found";
->>>>>>> Stashed changes
 
 function Router() {
   return (
-<<<<<<< Updated upstream
-    <>
-      <header className="header">
-        <h1>Travel Planner</h1>
-        <div>
-          <SignedOut>
-            <SignInButton />
-          </SignedOut>
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
-        </div>
-      </header>
-
-      <main>
-        <SignedIn>
-          <FirebaseTest />
-        </SignedIn>
-      </main>
-    </>
-=======
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/explore" component={Explore} />
@@ -49,7 +22,6 @@ function Router() {
       <Route path="/view-booking/:id" component={ViewBooking} />
       <Route component={NotFound} />
     </Switch>
->>>>>>> Stashed changes
   );
 }
 

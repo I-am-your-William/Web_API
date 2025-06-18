@@ -143,14 +143,14 @@ const globalRoutes = [
       // Randomly select 3-4 routes to get diverse results
       const selectedRoutes = globalRoutes
         .sort(() => Math.random() - 0.5)
-        .slice(0, 4); // Get 4 routes to ensure we get at least 3 results
-
-      // Fetch flights for selected routes with small delays to avoid rate limits
+        .slice(0, 4); // Get 4 routes to ensure we get at least 3 results      // Fetch flights for selected routes with delays to avoid rate limits
       const promises = selectedRoutes.map(async (route, index) => {
         try {
-          // Add small delay between requests to avoid rate limiting
-          if (index > 0) {
-            await new Promise(resolve => setTimeout(resolve, 200 * index));
+          // Add increasing delay between requests to avoid rate limiting
+          const delay = index * 1500; // 1.5 seconds between each request
+          if (delay > 0) {
+            console.log(`⏱️ Waiting ${delay}ms before fetching ${route.from}-${route.to}...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
 
           const params = new URLSearchParams({
@@ -161,19 +161,28 @@ const globalRoutes = [
             travelClass: 'ECONOMY'
           });
 
+          console.log(`🔍 Fetching flights for ${route.from}-${route.to}...`);
           const response = await fetch(`/api/flights?${params}`);
+          
           if (response.ok) {
             const data = await response.json();
             if (data.data && data.data.length > 0) {
+              console.log(`✅ Found ${data.data.length} flights for ${route.from}-${route.to}`);
               // Take just the first/cheapest flight from each route
               return data.data[0];
             } else if (data.rateLimited) {
-              console.log(`⚠️ Rate limited for route ${route.from}-${route.to}`);
+              console.log(`⚠️ Rate limited for route ${route.from}-${route.to}, skipping...`);
+            } else {
+              console.log(`📭 No flights found for ${route.from}-${route.to}`);
             }
+          } else if (response.status === 429) {
+            console.log(`⚠️ Rate limit hit for route ${route.from}-${route.to}, skipping...`);
+          } else {
+            console.log(`❌ Error response for ${route.from}-${route.to}: ${response.status}`);
           }
           return null;
         } catch (error) {
-          console.error(`Error fetching flights for ${route.from}-${route.to}:`, error);
+          console.error(`❌ Error fetching flights for ${route.from}-${route.to}:`, error);
           return null;
         }
       });

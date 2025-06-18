@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import axios from 'axios';
 import { clerkMiddleware, requireAuth, getAuth, clerkClient } from '@clerk/express';
 import { db } from './lib/firebase.js';
 import bookingsRouter from './routes/bookings.js';
@@ -10,6 +11,63 @@ import wishlistRouter from './routes/wishlist.js';
 
 
 dotenv.config();
+
+// Amadeus API configuration
+let amadeusAccessToken = null;
+const AMADEUS_CLIENT_ID = process.env.AMADEUS_CLIENT_ID;
+const AMADEUS_CLIENT_SECRET = process.env.AMADEUS_CLIENT_SECRET;
+
+// Rate limiting variables
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
+const RATE_LIMIT_DELAY = 5000; // 5 seconds delay on rate limit
+
+// Check if Amadeus credentials are available
+if (!AMADEUS_CLIENT_ID || !AMADEUS_CLIENT_SECRET) {
+  console.error('❌ Missing Amadeus API credentials in environment variables');
+  console.error('Please set AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET in your .env file');
+}
+
+// Function to ensure minimum delay between requests
+const enforceRateLimit = async () => {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const delay = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+    console.log(`⏱️ Rate limiting: waiting ${delay}ms before next request`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  lastRequestTime = Date.now();
+};
+
+// Function to authenticate with Amadeus API
+const authenticateAmadeus = async () => {
+  if (!AMADEUS_CLIENT_ID || !AMADEUS_CLIENT_SECRET) {
+    throw new Error('Missing Amadeus API credentials');
+  }
+
+  try {
+    const response = await axios.post('https://test.api.amadeus.com/v1/security/oauth2/token', {
+      grant_type: 'client_credentials',
+      client_id: AMADEUS_CLIENT_ID,
+      client_secret: AMADEUS_CLIENT_SECRET,
+    }, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    amadeusAccessToken = response.data.access_token;
+    console.log('🔑 Amadeus authentication successful');
+    return amadeusAccessToken;
+  } catch (error) {
+    console.error('❌ Amadeus authentication failed:', error.response?.data || error.message);
+    amadeusAccessToken = null;
+    throw new Error('Failed to authenticate with Amadeus API: ' + (error.response?.data?.error_description || error.message));
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,8 +82,6 @@ app.use(clerkMiddleware());
 
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/wishlist', wishlistRouter);
-<<<<<<< Updated upstream
-=======
 //app.use('/api/flights', flightsRouter);
 
 app.get('/api/flights', async (req, res) => {
@@ -37,10 +93,15 @@ app.get('/api/flights', async (req, res) => {
     adults = 1,
     travelClass = 'ECONOMY',
   } = req.query;
-
   try {
+    // Ensure we have authentication token
     if (!amadeusAccessToken) {
+      console.log('🔄 No access token available, authenticating...');
       await authenticateAmadeus();
+    }
+
+    if (!amadeusAccessToken) {
+      throw new Error('Failed to obtain Amadeus access token');
     }
 
     const params = {
@@ -57,28 +118,54 @@ app.get('/api/flights', async (req, res) => {
     // Clean up null/empty values
     Object.keys(params).forEach((key) => {
       if (!params[key]) delete params[key];
-    });
+    });    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
 
-    let response;
-    try {
-      response = await axios.get('https://test.api.amadeus.com/v2/shopping/flight-offers', {
-        headers: {
-          Authorization: `Bearer ${amadeusAccessToken}`,
-        },
-        params,
-      });
-    } catch (error) {
-      // If token expired, re-authenticate and retry
-      if (error.response?.status === 401) {
-        console.log('🔄 Access token expired, re-authenticating...');
-        await authenticateAmadeus();
+    while (retryCount <= maxRetries) {
+      try {
+        // Enforce rate limiting before making the request
+        await enforceRateLimit();
+
         response = await axios.get('https://test.api.amadeus.com/v2/shopping/flight-offers', {
           headers: {
             Authorization: `Bearer ${amadeusAccessToken}`,
           },
           params,
         });
-      } else {
+        
+        // If successful, break out of the retry loop
+        break;
+        
+      } catch (error) {
+        // Handle rate limiting (429 error)
+        if (error.response?.status === 429) {
+          console.log(`⚠️ Amadeus API Rate Limit hit (attempt ${retryCount + 1}/${maxRetries + 1})`);
+          console.log('Rate limit details:', error.response?.data);
+          
+          if (retryCount < maxRetries) {
+            const delay = RATE_LIMIT_DELAY * (retryCount + 1); // Exponential backoff
+            console.log(`⏱️ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            retryCount++;
+            continue;
+          } else {
+            console.log('❌ Max retries reached for rate limit');
+            return res.status(429).json({ 
+              error: 'Rate limit exceeded. Please try again later.',
+              retryAfter: 30 // suggest 30 seconds
+            });
+          }
+        }
+        
+        // If token expired, re-authenticate and retry
+        if (error.response?.status === 401) {
+          console.log('🔄 Access token expired, re-authenticating...');
+          await authenticateAmadeus();
+          retryCount++;
+          continue;
+        }
+          // For other errors, throw immediately
         throw error;
       }
     }
@@ -112,9 +199,7 @@ app.get('/api/flights', async (req, res) => {
           const qty = fareSeg.includedCheckedBags?.quantity;
           if (qty != null) baggageAllowances.push(qty);
         });
-      });
-
-      return {
+      });      return {
         id: flight.id,
         price: flight.price,
         itineraries: flight.itineraries,
@@ -122,7 +207,9 @@ app.get('/api/flights', async (req, res) => {
         layovers,
         baggageAllowances,
       };
-    });    res.json({ data: enrichedFlights });
+    });
+
+    res.json({ data: enrichedFlights });
   } catch (error) {
     const status = error.response?.status || 500;
     const message = error.response?.data || error.message;
@@ -168,7 +255,6 @@ app.get('/api/flights', async (req, res) => {
 //     res.status(500).json({ error: 'Location search failed' });
 //   }
 // });
->>>>>>> Stashed changes
 
 
 // ✅ Public test route (does NOT require login)
@@ -243,6 +329,13 @@ app.delete('/firestore-delete/:id', async (req, res) => {
 
 
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  
+  // Authenticate with Amadeus API on startup
+  try {
+    await authenticateAmadeus();
+  } catch (error) {
+    console.error('⚠️ Failed to authenticate with Amadeus API on startup:', error.message);
+  }
 });
