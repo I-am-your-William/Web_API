@@ -5,22 +5,9 @@ import { clerkMiddleware, requireAuth, getAuth, clerkClient } from '@clerk/expre
 import { db } from './lib/firebase.js';
 import bookingsRouter from './routes/bookings.js';
 import wishlistRouter from './routes/wishlist.js';
-//import flightsRouter from './routes/flights.js';
+import flightsRouter from './routes/flights.js';
+import flights2Router from './routes/flights2.js';
 import axios from 'axios';
-
-let amadeusAccessToken = '';
-
-// Authenticate with Amadeus API
-async function authenticateAmadeus() {
-  const params = new URLSearchParams();
-  params.append("grant_type", "client_credentials");
-  params.append("client_id", process.env.AMADEUS_CLIENT_ID);
-  params.append("client_secret", process.env.AMADEUS_CLIENT_SECRET);
-
-  const response = await axios.post("https://test.api.amadeus.com/v1/security/oauth2/token", params);
-  amadeusAccessToken = response.data.access_token;
-}
-
 
 dotenv.config();
 
@@ -38,125 +25,7 @@ app.use(clerkMiddleware());
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/wishlist', wishlistRouter);
 //app.use('/api/flights', flightsRouter);
-
-app.get('/api/flights', async (req, res) => {
-  let {
-    origin,
-    destination,
-    departureDate,
-    returnDate,
-    adults = 1,
-    travelClass = 'ECONOMY',
-  } = req.query;
-
-  try {
-    if (!amadeusAccessToken) {
-      await authenticateAmadeus();
-    }
-
-    const params = {
-      originLocationCode: origin,
-      destinationLocationCode: destination,
-      departureDate,
-      returnDate,
-      adults,
-      travelClass,
-      currencyCode: 'MYR',
-      max: 10, // increase to allow filtering
-    };
-
-    // Clean up null/empty values
-    Object.keys(params).forEach((key) => {
-      if (!params[key]) delete params[key];
-    });
-
-    const response = await axios.get('https://test.api.amadeus.com/v2/shopping/flight-offers', {
-      headers: {
-        Authorization: `Bearer ${amadeusAccessToken}`,
-      },
-      params,
-    });
-
-    const rawFlights = response.data.data;
-
-    // 🧠 Remove duplicates by flight.id
-    const uniqueFlights = Array.from(new Map(rawFlights.map(f => [f.id, f])).values());
-
-    const enrichedFlights = uniqueFlights.map((flight) => {
-      const airlineCodes = new Set();
-      const layovers = [];
-
-      flight.itineraries.forEach((itinerary) => {
-        itinerary.segments.forEach((segment, index, arr) => {
-          airlineCodes.add(segment.carrierCode);
-
-          // ✈️ Calculate layover time
-          if (index > 0) {
-            const prevArrival = new Date(arr[index - 1].arrival.at);
-            const currDeparture = new Date(segment.departure.at);
-            const layoverMins = (currDeparture.getTime() - prevArrival.getTime()) / (1000 * 60);
-            layovers.push(`${Math.floor(layoverMins / 60)}h ${Math.floor(layoverMins % 60)}m`);
-          }
-        });
-      });
-
-      const baggageAllowances = [];
-      flight.travelerPricings?.forEach((tp) => {
-        tp.fareDetailsBySegment?.forEach((fareSeg) => {
-          const qty = fareSeg.includedCheckedBags?.quantity;
-          if (qty != null) baggageAllowances.push(qty);
-        });
-      });
-
-      return {
-        id: flight.id,
-        price: flight.price,
-        itineraries: flight.itineraries,
-        airlineCodes: Array.from(airlineCodes),
-        layovers,
-        baggageAllowances,
-      };
-    });
-
-    res.json({ data: enrichedFlights });
-  } catch (error) {
-    const status = error.response?.status || 500;
-    const message = error.response?.data || error.message;
-    console.error('❌ Amadeus API Error:', message);
-    res.status(status).json({ error: message });
-  }
-});
-
-// // Location search: airports or cities
-// app.get('/api/locations', async (req, res) => {
-//   const { keyword } = req.query;
-
-//   if (!keyword || keyword.length < 2) {
-//     return res.status(400).json({ error: 'Keyword too short' });
-//   }
-
-//   try {
-//     if (!amadeusAccessToken) {
-//       await authenticateAmadeus();
-//     }
-
-//     const response = await axios.get('https://test.api.amadeus.com/v1/reference-data/locations', {
-//       headers: {
-//         Authorization: `Bearer ${amadeusAccessToken}`,
-//       },
-//       params: {
-//         keyword,
-//         subType: 'AIRPORT,CITY',
-//         page: { limit: 10 }
-//       },
-//     });
-
-//     res.json(response.data.data || []);
-//   } catch (error) {
-//     console.error('❌ Location search failed:', error.message);
-//     res.status(500).json({ error: 'Location search failed' });
-//   }
-// });
+app.use('/api/flights', flights2Router);
 
 
 // ✅ Public test route (does NOT require login)

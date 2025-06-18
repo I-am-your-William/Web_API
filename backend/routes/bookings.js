@@ -14,7 +14,7 @@ router.post('/flights', requireAuth(), async (req, res) => {
     console.log('🧾 userId from Clerk:', userId);
     console.log('📨 Request Body:', req.body);
 
-    const { flightId, passengerDetails, flightDetails } = req.body;
+    const { flightId, passengerDetails, flightDetails, contactInfo, selectedExtras,totalPrice } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: userId is missing' });
@@ -30,6 +30,17 @@ router.post('/flights', requireAuth(), async (req, res) => {
       userId,
       flightId,
       passengers: passengerDetails,
+      primaryContact: {
+        email: contactInfo.primaryEmail,
+        phone: contactInfo.primaryPhone,
+      },
+      emergencyContact: {
+        name: contactInfo.emergencyContactName,
+        phone: contactInfo.emergencyContactPhone,
+        relation: contactInfo.emergencyContactRelation,
+      },
+      extras: selectedExtras,
+      totalPrice: totalPrice,
       flightDetails,
       createdAt: new Date().toISOString(),
       type: 'flight'
@@ -82,6 +93,29 @@ router.get('/', requireAuth(), async (req, res) => {
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch bookings.' });
+  }
+});
+
+/**
+ * === FETCH PRIMARY CONTACT, EMERGENCY CONTACT, AND EXTRAS FOR A BOOKING ===
+ * GET /api/bookings/:id/contacts
+ */
+router.get('/:id/contacts', requireAuth(), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const doc = await db.collection('bookings').doc(id).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    const data = doc.data();
+    res.json({
+      primaryContact: data.primaryContact || null,
+      emergencyContact: data.emergencyContact || null,
+      extras: data.extras || [],
+      totalPrice: data.totalPrice || 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch contacts and extras.' });
   }
 });
 
