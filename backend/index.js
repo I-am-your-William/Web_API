@@ -10,6 +10,21 @@ import axios from 'axios';
 
 dotenv.config();
 
+// Environment variables validation
+const requiredEnvVars = [
+  'AMADEUS_CLIENT_ID',
+  'AMADEUS_CLIENT_SECRET',
+];
+
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingEnvVars.forEach(envVar => console.error(`  - ${envVar}`));
+  console.error('Please add these to your .env file or hosting platform environment variables');
+  process.exit(1);
+}
+
 // Amadeus API configuration
 let amadeusAccessToken = null;
 const AMADEUS_CLIENT_ID = process.env.AMADEUS_CLIENT_ID;
@@ -19,12 +34,6 @@ const AMADEUS_CLIENT_SECRET = process.env.AMADEUS_CLIENT_SECRET;
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
 const RATE_LIMIT_DELAY = 5000; // 5 seconds delay on rate limit
-
-// Check if Amadeus credentials are available
-if (!AMADEUS_CLIENT_ID || !AMADEUS_CLIENT_SECRET) {
-  console.error('❌ Missing Amadeus API credentials in environment variables');
-  console.error('Please set AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET in your .env file');
-}
 
 // Function to ensure minimum delay between requests
 const enforceRateLimit = async () => {
@@ -70,8 +79,25 @@ const authenticateAmadeus = async () => {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration for both development and production
+const allowedOrigins = [
+  'http://localhost:5173', // Development
+  'http://localhost:3000', // Alternative development port
+  process.env.FRONTEND_URL, // Production frontend URL
+].filter(Boolean); // Remove undefined values
+
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
