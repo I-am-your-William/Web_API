@@ -292,7 +292,8 @@ export default function FlightSearch() {
         travelClass,
       })
 
-      const response = await fetch(`http://localhost:5000/api/flights?${params.toString()}`);
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/flights?${params.toString()}`);
       if (!response.ok) throw new Error('Flight search failed');
       const data = await response.json();
       setFlights(data.data || []);
