@@ -267,9 +267,6 @@ export default function MyBooking() {
                             <Users className="w-4 h-4" />
                             <span>{booking.passengers.length} passenger{booking.passengers.length > 1 ? 's' : ''}</span>
                           </div>
-                          <div className="font-semibold text-slate-900">
-                            {booking.price.currency} {booking.price.total}
-                          </div>
                         </div>
                       </div>
                       
