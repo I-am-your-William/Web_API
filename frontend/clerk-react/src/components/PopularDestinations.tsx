@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
+import { API_BASE_URL } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ function PlaceDetailsModal({ place, isOpen, onClose }: PlaceDetailsModalProps) {
 
     // Otherwise, fetch place details from API
     setLoading(true);
-    fetch(`/api/places/details/${place.placeId}`)
+    fetch(`${API_BASE_URL}/api/places/details/${place.placeId}`)
       .then(response => {
         if (!response.ok) throw new Error('Failed to fetch place details');
         return response.json();
@@ -197,7 +198,7 @@ export function PopularDestinations() {
       try {
         console.log('🎯 Fetching wishlist for PopularDestinations...');
         const token = await getToken();
-        const response = await fetch('http://localhost:5000/api/myplan', {
+        const response = await fetch(`${API_BASE_URL}/api/myplan`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

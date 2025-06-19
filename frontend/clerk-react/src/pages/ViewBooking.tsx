@@ -1,6 +1,7 @@
 import { useLocation, useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
+import { API_BASE_URL } from "@/lib/api";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,7 +88,7 @@ export default function ViewBooking() {
     const fetchBookingFromList = async () => {
       try {
         const token = await getToken();
-        const response = await fetch('/api/bookings/', {
+        const response = await fetch(`${API_BASE_URL}/api/bookings/`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
             "Content-Type": "application/json"
@@ -125,7 +126,7 @@ export default function ViewBooking() {
       try {
         setLoading(true);
         const token = await getToken();
-        const response = await fetch(`/api/bookings/${bookingId}/contacts`, {
+        const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/contacts`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
             "Content-Type": "application/json",

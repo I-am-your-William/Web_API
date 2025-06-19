@@ -1,6 +1,7 @@
 import { useLocation, useParams, useRouter } from 'wouter';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
+import { API_BASE_URL } from '@/lib/api';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export default function PlaceDetails() {
     
     console.log('🔍 No place data found, fetching details for placeId:', placeId);
     // Fetch place details using the specific place ID endpoint
-    fetch(`/api/places/details/${encodeURIComponent(placeId)}`)
+    fetch(`${API_BASE_URL}/api/places/details/${encodeURIComponent(placeId)}`)
       .then(response => {
         console.log('📡 Place details API response status:', response.status);
         if (!response.ok) throw new Error('Place not found');
@@ -119,7 +120,7 @@ export default function PlaceDetails() {
 
       const token = await getToken();
 
-      const response = await fetch('http://localhost:5000/api/myplan', {
+      const response = await fetch(`${API_BASE_URL}/api/myplan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

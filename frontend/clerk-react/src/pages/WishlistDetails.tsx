@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { useAuth } from '@clerk/clerk-react';
+import { API_BASE_URL } from '@/lib/api';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export default function WishlistDetails() {
         const token = await getToken();
 
         // Fetch all places from myplan and find the one we need
-        const response = await fetch('http://localhost:5000/api/myplan', {
+        const response = await fetch(`${API_BASE_URL}/api/myplan`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

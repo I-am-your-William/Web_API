@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useRoute, useLocation } from "wouter"
 import { useAuth } from "@clerk/clerk-react"
+import { API_BASE_URL } from "@/lib/api"
 import { Navigation } from "@/components/Navigation"
 import { Footer } from "@/components/Footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -182,7 +183,7 @@ export default function FlightDetails() {
   const saveBookingToDatabase = async (bookingData: any) => {
     const token = await getToken()
     try {
-      const response = await fetch("/api/bookings/flights", {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/flights`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

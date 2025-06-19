@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -164,7 +165,7 @@ const globalRoutes = [
           });
 
           console.log(`🔍 Fetching flights for ${route.from}-${route.to}...`);
-          const response = await fetch(`/api/flights?${params}`);
+          const response = await fetch(`${API_BASE_URL}/api/flights?${params}`);
           
           if (response.ok) {
             const data = await response.json();

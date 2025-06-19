@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useUser } from '@clerk/clerk-react';
+import { API_BASE_URL } from '@/lib/api';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function SearchPlace() {
     console.log('🔍 Searching for:', searchQuery);
     setLoading(true);
     try {
-      const response = await fetch(`/api/places?location=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_BASE_URL}/api/places?location=${encodeURIComponent(searchQuery)}`);
       console.log('📡 API response status:', response.status);
       
       if (response.ok) {

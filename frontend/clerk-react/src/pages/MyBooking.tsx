@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
+import { API_BASE_URL } from "@/lib/api";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,7 +61,7 @@ export default function MyBooking() {
     const fetchBookings = async () => {
       try {
         const token = await getToken();
-        const response = await fetch("/api/bookings", {
+        const response = await fetch(`${API_BASE_URL}/api/bookings`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
             "Content-Type": "application/json"

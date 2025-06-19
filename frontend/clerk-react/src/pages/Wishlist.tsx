@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { useLocation } from 'wouter';
+import { API_BASE_URL } from '@/lib/api';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export default function Wishlist() {
         const token = await getToken();
         console.log('Got token:', token ? 'Token exists' : 'No token');
 
-        const response = await fetch('http://localhost:5000/api/myplan', {
+        const response = await fetch(`${API_BASE_URL}/api/myplan`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -90,7 +91,7 @@ export default function Wishlist() {
 
     try {
       const token = await getToken();
-      await fetch(`http://localhost:5000/api/myplan/${placeId}`, {
+      await fetch(`${API_BASE_URL}/api/myplan/${placeId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
