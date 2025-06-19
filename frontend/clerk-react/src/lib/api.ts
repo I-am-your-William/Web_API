@@ -1,7 +1,6 @@
 // API configuration utility
 const getApiBaseUrl = () => {
   const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  const isProduction = import.meta.env.VITE_APP_ENV === 'production';
   
   // If we have an explicit base URL from environment, use it
   if (envBaseUrl) {
@@ -17,13 +16,12 @@ const getApiBaseUrl = () => {
       return 'http://localhost:5000';
     }
     
-    // If hosted, try to use relative URLs (same domain) or fallback to localhost
-    // You can customize this logic based on your hosting setup
-    return isProduction ? '' : 'http://localhost:5000';
+    // If hosted but no environment variable, use your deployed backend
+    return 'https://web-api-6003cem.onrender.com';
   }
   
   // Server-side fallback
-  return 'http://localhost:5000';
+  return 'https://web-api-6003cem.onrender.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
