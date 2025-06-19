@@ -19,6 +19,10 @@ export function Navigation() {
                 <Link href="/my-bookings" className="text-slate-600 hover:text-primary font-medium transition-colors">
                   My Bookings
                 </Link>
+
+                <Link href="/wishlist" className="text-slate-600 hover:text-primary font-medium transition-colors">
+                  Wishlist
+                </Link>
               </SignedIn>
             </div>
           </div>

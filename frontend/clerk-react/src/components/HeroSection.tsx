@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plane } from "lucide-react";
 import { useLocation } from "wouter";
 
 export function HeroSection() {
@@ -12,6 +12,10 @@ export function HeroSection() {
     if (searchQuery.trim()) {
       setLocation(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
     }
+  };
+
+  const handleFlightSearch = () => {
+    setLocation('/flight');
   };
 
   return (
@@ -27,7 +31,7 @@ export function HeroSection() {
         </div>
         
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 animate-slide-up">
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-4">
             <div className="flex-1">
               <Input
                 type="text"
@@ -43,6 +47,17 @@ export function HeroSection() {
               className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
             >
               <Search className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          <div className="flex justify-center">
+            <Button 
+              onClick={handleFlightSearch}
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary hover:text-white px-8 py-3 rounded-xl font-semibold transition-colors"
+            >
+              <Plane className="w-5 h-5 mr-2" />
+              Search Flights
             </Button>
           </div>
         </div>

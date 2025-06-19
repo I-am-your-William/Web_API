@@ -1,14 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import axios from 'axios';
 import { clerkMiddleware, requireAuth, getAuth, clerkClient } from '@clerk/express';
 import { db } from './lib/firebase.js';
 import bookingsRouter from './routes/bookings.js';
-import wishlistRouter from './routes/wishlist.js';
-
-
-
+import myplanRouter from './routes/myplan.js';
+import placesRouter from './routes/places.js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -81,180 +79,10 @@ app.use(express.json());
 app.use(clerkMiddleware());
 
 app.use('/api/bookings', bookingsRouter);
-app.use('/api/wishlist', wishlistRouter);
-//app.use('/api/flights', flightsRouter);
-
-app.get('/api/flights', async (req, res) => {
-  let {
-    origin,
-    destination,
-    departureDate,
-    returnDate,
-    adults = 1,
-    travelClass = 'ECONOMY',
-  } = req.query;
-  try {
-    // Ensure we have authentication token
-    if (!amadeusAccessToken) {
-      console.log('🔄 No access token available, authenticating...');
-      await authenticateAmadeus();
-    }
-
-    if (!amadeusAccessToken) {
-      throw new Error('Failed to obtain Amadeus access token');
-    }
-
-    const params = {
-      originLocationCode: origin,
-      destinationLocationCode: destination,
-      departureDate,
-      returnDate,
-      adults,
-      travelClass,
-      currencyCode: 'MYR',
-      max: 10, // increase to allow filtering
-    };
-
-    // Clean up null/empty values
-    Object.keys(params).forEach((key) => {
-      if (!params[key]) delete params[key];
-    });    let response;
-    let retryCount = 0;
-    const maxRetries = 2;
-
-    while (retryCount <= maxRetries) {
-      try {
-        // Enforce rate limiting before making the request
-        await enforceRateLimit();
-
-        response = await axios.get('https://test.api.amadeus.com/v2/shopping/flight-offers', {
-          headers: {
-            Authorization: `Bearer ${amadeusAccessToken}`,
-          },
-          params,
-        });
-        
-        // If successful, break out of the retry loop
-        break;
-        
-      } catch (error) {
-        // Handle rate limiting (429 error)
-        if (error.response?.status === 429) {
-          console.log(`⚠️ Amadeus API Rate Limit hit (attempt ${retryCount + 1}/${maxRetries + 1})`);
-          console.log('Rate limit details:', error.response?.data);
-          
-          if (retryCount < maxRetries) {
-            const delay = RATE_LIMIT_DELAY * (retryCount + 1); // Exponential backoff
-            console.log(`⏱️ Waiting ${delay}ms before retry...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            retryCount++;
-            continue;
-          } else {
-            console.log('❌ Max retries reached for rate limit');
-            return res.status(429).json({ 
-              error: 'Rate limit exceeded. Please try again later.',
-              retryAfter: 30 // suggest 30 seconds
-            });
-          }
-        }
-        
-        // If token expired, re-authenticate and retry
-        if (error.response?.status === 401) {
-          console.log('🔄 Access token expired, re-authenticating...');
-          await authenticateAmadeus();
-          retryCount++;
-          continue;
-        }
-          // For other errors, throw immediately
-        throw error;
-      }
-    }
-
-    const rawFlights = response.data.data;
-
-    // 🧠 Remove duplicates by flight.id
-    const uniqueFlights = Array.from(new Map(rawFlights.map(f => [f.id, f])).values());
-
-    const enrichedFlights = uniqueFlights.map((flight) => {
-      const airlineCodes = new Set();
-      const layovers = [];
-
-      flight.itineraries.forEach((itinerary) => {
-        itinerary.segments.forEach((segment, index, arr) => {
-          airlineCodes.add(segment.carrierCode);
-
-          // ✈️ Calculate layover time
-          if (index > 0) {
-            const prevArrival = new Date(arr[index - 1].arrival.at);
-            const currDeparture = new Date(segment.departure.at);
-            const layoverMins = (currDeparture.getTime() - prevArrival.getTime()) / (1000 * 60);
-            layovers.push(`${Math.floor(layoverMins / 60)}h ${Math.floor(layoverMins % 60)}m`);
-          }
-        });
-      });
-
-      const baggageAllowances = [];
-      flight.travelerPricings?.forEach((tp) => {
-        tp.fareDetailsBySegment?.forEach((fareSeg) => {
-          const qty = fareSeg.includedCheckedBags?.quantity;
-          if (qty != null) baggageAllowances.push(qty);
-        });
-      });      return {
-        id: flight.id,
-        price: flight.price,
-        itineraries: flight.itineraries,
-        airlineCodes: Array.from(airlineCodes),
-        layovers,
-        baggageAllowances,
-      };
-    });
-
-    res.json({ data: enrichedFlights });
-  } catch (error) {
-    const status = error.response?.status || 500;
-    const message = error.response?.data || error.message;
-    
-    if (status === 429) {
-      console.warn('⚠️ Amadeus API Rate Limit:', message);
-      // Return empty data instead of error for rate limits
-      res.json({ data: [], rateLimited: true });
-    } else {
-      console.error('❌ Amadeus API Error:', message);
-      res.status(status).json({ error: message });
-    }
-  }
-});
-
-// // Location search: airports or cities
-// app.get('/api/locations', async (req, res) => {
-//   const { keyword } = req.query;
-
-//   if (!keyword || keyword.length < 2) {
-//     return res.status(400).json({ error: 'Keyword too short' });
-//   }
-
-//   try {
-//     if (!amadeusAccessToken) {
-//       await authenticateAmadeus();
-//     }
-
-//     const response = await axios.get('https://test.api.amadeus.com/v1/reference-data/locations', {
-//       headers: {
-//         Authorization: `Bearer ${amadeusAccessToken}`,
-//       },
-//       params: {
-//         keyword,
-//         subType: 'AIRPORT,CITY',
-//         page: { limit: 10 }
-//       },
-//     });
-
-//     res.json(response.data.data || []);
-//   } catch (error) {
-//     console.error('❌ Location search failed:', error.message);
-//     res.status(500).json({ error: 'Location search failed' });
-//   }
-// });
+app.use('/api/myplan', myplanRouter);
+app.use('/api/places', placesRouter);
+//app.use('/api/flights', flightsRouter); // Old flights router
+//app.use('/api/flights', flights2Router); // Using inline endpoint instead for better rate limiting
 
 
 // ✅ Public test route (does NOT require login)
@@ -325,9 +153,153 @@ app.delete('/firestore-delete/:id', async (req, res) => {
   }
 });
 
+// ✅ Flights search endpoint with rate limiting
+app.get('/api/flights', async (req, res) => {
+  let {
+    origin,
+    destination,
+    departureDate,
+    returnDate,
+    adults = 1,
+    travelClass = 'ECONOMY',
+  } = req.query;
 
+  try {
+    // Ensure we have authentication token
+    if (!amadeusAccessToken) {
+      console.log('🔄 No access token available, authenticating...');
+      await authenticateAmadeus();
+    }
 
+    if (!amadeusAccessToken) {
+      throw new Error('Failed to obtain Amadeus access token');
+    }
 
+    const params = {
+      originLocationCode: origin,
+      destinationLocationCode: destination,
+      departureDate,
+      returnDate,
+      adults,
+      travelClass,
+      currencyCode: 'MYR',
+      max: 10, // increase to allow filtering
+    };
+
+    // Clean up null/empty values
+    Object.keys(params).forEach((key) => {
+      if (!params[key]) delete params[key];
+    });
+
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        // Enforce rate limiting before making the request
+        await enforceRateLimit();
+
+        response = await axios.get('https://test.api.amadeus.com/v2/shopping/flight-offers', {
+          headers: {
+            Authorization: `Bearer ${amadeusAccessToken}`,
+          },
+          params,
+        });
+        
+        // If successful, break out of the retry loop
+        break;
+        
+      } catch (error) {
+        // Handle rate limiting (429 error)
+        if (error.response?.status === 429) {
+          console.log(`⚠️ Amadeus API Rate Limit hit (attempt ${retryCount + 1}/${maxRetries + 1})`);
+          console.log('Rate limit details:', error.response?.data);
+          
+          if (retryCount < maxRetries) {
+            const delay = RATE_LIMIT_DELAY * (retryCount + 1); // Exponential backoff
+            console.log(`⏱️ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            retryCount++;
+            continue;
+          } else {
+            console.log('❌ Max retries reached for rate limit');
+            return res.status(429).json({ 
+              error: 'Rate limit exceeded. Please try again later.',
+              retryAfter: 30 // suggest 30 seconds
+            });
+          }
+        }
+        
+        // If token expired, re-authenticate and retry
+        if (error.response?.status === 401) {
+          console.log('🔄 Access token expired, re-authenticating...');
+          await authenticateAmadeus();
+          retryCount++;
+          continue;
+        }
+        
+        // For other errors, throw immediately
+        throw error;
+      }
+    }
+
+    const rawFlights = response.data.data;
+
+    // 🧠 Remove duplicates by flight.id
+    const uniqueFlights = Array.from(new Map(rawFlights.map(f => [f.id, f])).values());
+
+    const enrichedFlights = uniqueFlights.map((flight) => {
+      const airlineCodes = new Set();
+      const layovers = [];
+
+      flight.itineraries.forEach((itinerary) => {
+        itinerary.segments.forEach((segment, index, arr) => {
+          airlineCodes.add(segment.carrierCode);
+
+          // ✈️ Calculate layover time
+          if (index > 0) {
+            const prevArrival = new Date(arr[index - 1].arrival.at);
+            const currDeparture = new Date(segment.departure.at);
+            const layoverMins = (currDeparture.getTime() - prevArrival.getTime()) / (1000 * 60);
+            layovers.push(`${Math.floor(layoverMins / 60)}h ${Math.floor(layoverMins % 60)}m`);
+          }
+        });
+      });
+
+      const baggageAllowances = [];
+      flight.travelerPricings?.forEach((tp) => {
+        tp.fareDetailsBySegment?.forEach((fareSeg) => {
+          const qty = fareSeg.includedCheckedBags?.quantity;
+          if (qty != null) baggageAllowances.push(qty);
+        });
+      });
+
+      return {
+        id: flight.id,
+        price: flight.price,
+        itineraries: flight.itineraries,
+        airlineCodes: Array.from(airlineCodes),
+        layovers,
+        baggageAllowances,
+      };
+    });
+
+    res.json({ data: enrichedFlights });
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const message = error.response?.data || error.message;
+    
+    if (status === 429) {
+      console.warn('⚠️ Amadeus API Rate Limit:', message);
+      // Return empty data instead of error for rate limits
+      res.json({ data: [], rateLimited: true });
+    } else {
+      console.error('❌ Amadeus API Error:', message);
+      res.status(status).json({ error: message });
+    }
+  }
+});
 
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
