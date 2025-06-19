@@ -85,8 +85,10 @@ export function PlanSmarterPanel() {
   const fetchExchangeRates = async () => {
     setIsLoading(true);
     try {
-      const apiKey = import.meta.env.VITE_EXCHANGE_RATE_API_KEY || '3c594e4fdf637bf9729a392d';
-      console.log('API Key available:', !!apiKey);
+      const apiKey = import.meta.env.VITE_EXCHANGE_RATE_API_KEY;
+      if (!apiKey) {
+        throw new Error('API key is missing. Please set VITE_EXCHANGE_RATE_API_KEY in your .env file.');
+      }
       
       const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${fromCurrency}`);
       console.log('Response status:', response.status);
@@ -191,10 +193,9 @@ const globalRoutes = [
       const validFlights = results.filter(flight => flight !== null);
 
       // Format the flights
-      const formattedFlights = validFlights.slice(0, 3).map((flight: any, index: number) => {
-        const firstSegment = flight.itineraries[0]?.segments[0];
-        const lastSegment = flight.itineraries[0]?.segments[flight.itineraries[0].segments.length - 1];
-        const route = `${firstSegment?.departure.iataCode} → ${lastSegment?.arrival.iataCode}`;
+      const formattedFlights: FlightPrice[] = validFlights.slice(0, 3).map((flight, index) => {
+        const firstSegment = flight.itineraries?.[0]?.segments?.[0];
+        const route = `${firstSegment?.departure.iataCode} → ${firstSegment?.arrival.iataCode}`;
         
         const depDate = new Date(firstSegment?.departure.at);
         const formattedDate = depDate.toLocaleDateString('en-US', { 
@@ -204,9 +205,9 @@ const globalRoutes = [
 
         return {
           id: flight.id || `flight-${index}`,
-          route,
+          route: route || 'Unknown Route', // Ensure route is always defined
           price: parseFloat(flight.price.total),
-          currency: 'MYR',
+          currency: flight.price.currency || 'MYR', // Use currency from API if available
           date: formattedDate,
           lastUpdated: new Date().toLocaleTimeString()
         };
