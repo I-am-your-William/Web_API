@@ -40,6 +40,20 @@ export default function SearchPlace() {
   const mapRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
+    // Check for search query in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParam = urlParams.get('q');
+    
+    if (queryParam) {
+      console.log('🔍 Found search query in URL:', queryParam);
+      setLocation(queryParam);
+      // Automatically perform search when query is provided
+      performSearch(queryParam);
+      
+      // Clean up URL by removing the query parameter after processing
+      window.history.replaceState({}, '', '/explore');
+    }
+
     // Try geolocation
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -52,22 +66,29 @@ export default function SearchPlace() {
     );
   }, []);
 
-  const fetchPlaces = async () => {
-    if (!location.trim()) return;
+  const performSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
     
+    console.log('🔍 Searching for:', searchQuery);
     setLoading(true);
     try {
-      const response = await fetch(`/api/places?location=${encodeURIComponent(location)}`);
+      const response = await fetch(`/api/places?location=${encodeURIComponent(searchQuery)}`);
+      console.log('📡 API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📍 Received places data:', data);
         setPlaces(data.places || []);
         if (data.places && data.places.length > 0) {
           const first = data.places[0];
+          console.log('🎯 Setting map center to first result:', first.name, first.location);
           setMapCenter(first.location);
           setSelectedPlace(first);
           updateMap(first.location);
         }
       } else {
+        const errorData = await response.json();
+        console.error('❌ API Error:', response.status, errorData);
         console.warn('Places API not available, showing demo data');
         // Only use demo data if API is not available
         const demoPlaces: Place[] = [
@@ -93,6 +114,10 @@ export default function SearchPlace() {
     }
   };
 
+  const fetchPlaces = async () => {
+    await performSearch(location);
+  };
+
   const updateMap = (center: { lat: number; lng: number }) => {
     const mapUrl = `https://maps.google.com/maps?q=${center.lat},${center.lng}&z=15&output=embed`;
     if (mapRef.current) {
@@ -107,6 +132,8 @@ export default function SearchPlace() {
   };
 
   const goToDetails = (place: Place) => {
+    // Store place data in window history state for navigation
+    window.history.pushState({ place }, '', `/details/${place.placeId}`);
     setRoute(`/details/${place.placeId}`);
   };
 

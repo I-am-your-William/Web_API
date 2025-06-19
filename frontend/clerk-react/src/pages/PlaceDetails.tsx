@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'wouter';
+import { useLocation, useParams, useRouter } from 'wouter';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { Navigation } from "@/components/Navigation";
@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Star, MapPin, Heart, Phone, Mail, User } from "lucide-react";
 
 export default function PlaceDetails() {
-  const [, setLocation] = useLocation();
+  const [locationHook, setLocation] = useLocation();
   const params = useParams();
   const placeId = params.id;
 
@@ -19,44 +19,75 @@ export default function PlaceDetails() {
   const [isSaved, setIsSaved] = useState(false);
   const [countryInput, setCountryInput] = useState('');
   const [place, setPlace] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { isSignedIn, getToken } = useAuth();
 
-  // Load place data based on placeId
+  // Load place data if not passed in state
   useEffect(() => {
-    if (placeId) {
-      // Try to fetch from API first
-      fetch(`/api/places/${placeId}`)
-        .then(response => {
-          if (!response.ok) throw new Error('Place not found');
-          return response.json();
-        })
-        .then(data => setPlace(data))
-        .catch(() => {
-          // Fallback to demo data if API unavailable
-          const demoPlace = {
-            name: "Kuala Lumpur Tower",
-            rating: 4.2,
-            userRatingsTotal: 1532,
-            address: "No. 2, Jalan Punchak, Off, Jalan P. Ramlee, 50250 Kuala Lumpur",
-            placeId: placeId,
-            location: { lat: 3.1527, lng: 101.7030 },
-            reviews: [
-              { author: "John Doe", text: "Amazing view of the city!", rating: 5, time: "2 weeks ago" },
-              { author: "Jane Smith", text: "Great experience, worth visiting", rating: 4, time: "1 month ago" }
-            ]
-          };
-          setPlace(demoPlace);
-        });
+    // Check if place data was passed via history state
+    const statePlace = (window.history.state as any)?.place;
+    if (statePlace) {
+      console.log('🏢 Using place from navigation state:', statePlace.name);
+      setPlace(statePlace);
+      setLoading(false);
+      return;
     }
+
+    // If no place data and no placeId, we can't show anything
+    if (!placeId) {
+      setError('Place ID is required');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('🔍 No place data found, fetching details for placeId:', placeId);
+    // Fetch place details using the specific place ID endpoint
+    fetch(`/api/places/details/${encodeURIComponent(placeId)}`)
+      .then(response => {
+        console.log('📡 Place details API response status:', response.status);
+        if (!response.ok) throw new Error('Place not found');
+        return response.json();
+      })
+      .then(data => {
+        console.log('📍 Place details result:', data);
+        if (data.place) {
+          console.log('✅ Found place:', data.place.name);
+          setPlace(data.place);
+        } else {
+          setError('Place not found');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Failed to load place details:', err);
+        setError('Failed to load place details');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [placeId]);
 
-  if (!place) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navigation />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-12">
-            <p className="text-slate-600">Place not found. Please go back and try again.</p>
+            <p className="text-slate-600">Loading place details...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !place) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navigation />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-slate-600">{error || 'Place details not found.'}</p>
             <Button onClick={() => setLocation('/explore')} className="mt-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Search

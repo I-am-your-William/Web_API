@@ -4,12 +4,13 @@ import { useAuth } from '@clerk/clerk-react';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plane, Clock, MapPin, Luggage, Users, CreditCard } from "lucide-react";
+import { ArrowLeft, Plane, Clock, MapPin, Luggage, Users, CreditCard, Mail, Phone, Shield, Minus, Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 interface FlightOffer {
   id: string;
@@ -30,6 +31,16 @@ interface FlightOffer {
   }[];
 }
 
+// Update the PassengerDetail type to include missing fields
+interface PassengerDetail {
+  name: string;
+  gender: string;
+  birthday: string;
+  title: string;
+  email: string;
+  phone: string;
+}
+
 export default function FlightDetails() {
   const [, params] = useRoute('/flight-details/:id');
   const [, setLocation] = useLocation();
@@ -38,9 +49,16 @@ export default function FlightDetails() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [numPassengers, setNumPassengers] = useState(1);
-  const [passengerDetails, setPassengerDetails] = useState([
-    { name: '', gender: '', birthday: '' }
+  const [passengerDetails, setPassengerDetails] = useState<PassengerDetail[]>([
+    { name: "", gender: "", birthday: "", title: "Mr", email: "", phone: "" },
   ]);
+  const [contactInfo, setContactInfo] = useState({
+    primaryEmail: '',
+    primaryPhone: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelation: ''
+  });
 
   useEffect(() => {
     // Get flight data from sessionStorage or location state
@@ -89,6 +107,7 @@ export default function FlightDetails() {
         flightId: flight.id,
         passengerDetails,
         flightDetails: flight,
+        contactInfo, // Include contact information in the booking payload
       };
 
       const res = await fetch('/api/bookings/flights', {
@@ -128,10 +147,14 @@ export default function FlightDetails() {
     setPassengerDetails(newDetails);
   };
 
-  const handlePassengerDetailChange = (index: number, field: 'name' | 'gender' | 'birthday', value: string) => {
+  const handlePassengerDetailChange = (index: number, field: 'name' | 'gender' | 'birthday' | 'email' | 'phone' | 'title', value: string) => {
     const updatedDetails = [...passengerDetails];
     updatedDetails[index][field] = value;
     setPassengerDetails(updatedDetails);
+  };
+
+  const handleContactInfoChange = (field: 'primaryEmail' | 'primaryPhone' | 'emergencyContactName' | 'emergencyContactPhone' | 'emergencyContactRelation', value: string) => {
+    setContactInfo(prev => ({ ...prev, [field]: value }));
   };
 
   const formatDateTime = (dateTime: string) => {
@@ -163,6 +186,223 @@ export default function FlightDetails() {
     };
     return airlines[code] || code;
   };
+
+  const renderPassengerAndContactForm = () => (
+    <div className="space-y-8">
+      {/* Passenger Count */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Passenger Information</h3>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePassengerCountChange(numPassengers - 1)}
+            disabled={numPassengers <= 1}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="px-3 py-1 bg-muted rounded text-sm font-medium">{numPassengers}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePassengerCountChange(numPassengers + 1)}
+            disabled={numPassengers >= 9}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Passenger Details */}
+      {passengerDetails.map((passenger, idx) => (
+        <Card key={idx}>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Passenger {idx + 1}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Title *</Label>
+                <Select
+                  value={passenger.title}
+                  onValueChange={(value) => handlePassengerDetailChange(idx, "title", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mr">Mr</SelectItem>
+                    <SelectItem value="Ms">Ms</SelectItem>
+                    <SelectItem value="Mrs">Mrs</SelectItem>
+                    <SelectItem value="Dr">Dr</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Full Name *</Label>
+                <Input
+                  value={passenger.name}
+                  onChange={(e) => handlePassengerDetailChange(idx, "name", e.target.value)}
+                  placeholder="Enter full name as on passport"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Gender *</Label>
+                <Select
+                  value={passenger.gender}
+                  onValueChange={(value) => handlePassengerDetailChange(idx, "gender", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Date of Birth *</Label>
+                <Input
+                  type="date"
+                  value={passenger.birthday}
+                  onChange={(e) => handlePassengerDetailChange(idx, "birthday", e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address *
+                </Label>
+                <Input
+                  type="email"
+                  value={passenger.email}
+                  onChange={(e) => handlePassengerDetailChange(idx, "email", e.target.value)}
+                  placeholder="passenger@email.com"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number *
+                </Label>
+                <Input
+                  type="tel"
+                  value={passenger.phone}
+                  onChange={(e) => handlePassengerDetailChange(idx, "phone", e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  required
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      <Separator />
+
+      {/* Primary Contact Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Primary Contact Information
+          </CardTitle>
+          <CardDescription>This will be used for booking confirmations and updates</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Primary Email Address *</Label>
+              <Input
+                type="email"
+                value={contactInfo.primaryEmail}
+                onChange={(e) => handleContactInfoChange("primaryEmail", e.target.value)}
+                placeholder="your@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Primary Phone Number *</Label>
+              <Input
+                type="tel"
+                value={contactInfo.primaryPhone}
+                onChange={(e) => handleContactInfoChange("primaryPhone", e.target.value)}
+                placeholder="+1 (555) 123-4567"
+                required
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Emergency Contact Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Emergency Contact Information
+          </CardTitle>
+          <CardDescription>Person to contact in case of emergency</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Emergency Contact Name *</Label>
+              <Input
+                value={contactInfo.emergencyContactName}
+                onChange={(e) => handleContactInfoChange("emergencyContactName", e.target.value)}
+                placeholder="Full name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Emergency Contact Phone *</Label>
+              <Input
+                type="tel"
+                value={contactInfo.emergencyContactPhone}
+                onChange={(e) => handleContactInfoChange("emergencyContactPhone", e.target.value)}
+                placeholder="+1 (555) 123-4567"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Relationship</Label>
+              <Select
+                value={contactInfo.emergencyContactRelation}
+                onValueChange={(value) => handleContactInfoChange("emergencyContactRelation", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="spouse">Spouse</SelectItem>
+                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="child">Child</SelectItem>
+                  <SelectItem value="sibling">Sibling</SelectItem>
+                  <SelectItem value="friend">Friend</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -283,90 +523,41 @@ export default function FlightDetails() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
-                    <Luggage className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm">
-                      {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight || 20}kg checked baggage
-                    </span>
+                    <input type="checkbox" id="checked-baggage" className="form-checkbox" defaultChecked />
+                    <label htmlFor="checked-baggage" className="flex items-center space-x-2">
+                      <Luggage className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm">
+                        {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags?.weight || 20}kg checked baggage
+                      </span>
+                    </label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm">Seat selection</span>
+                    <input type="checkbox" id="seat-selection" className="form-checkbox" defaultChecked />
+                    <label htmlFor="seat-selection" className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm">Seat selection</span>
+                    </label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CreditCard className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm">Refundable</span>
+                    <input type="checkbox" id="refundable" className="form-checkbox" defaultChecked />
+                    <label htmlFor="refundable" className="flex items-center space-x-2">
+                      <CreditCard className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm">Refundable</span>
+                    </label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Plane className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm">In-flight meal</span>
+                    <input type="checkbox" id="in-flight-meal" className="form-checkbox" defaultChecked />
+                    <label htmlFor="in-flight-meal" className="flex items-center space-x-2">
+                      <Plane className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm">In-flight meal</span>
+                    </label>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Passenger Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="w-5 h-5" />
-                  <span>Passenger Information</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Number of Passengers</label>
-                  <Select value={numPassengers.toString()} onValueChange={(value) => handlePassengerCountChange(parseInt(value))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 9 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1} Passenger{i > 0 ? 's' : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {passengerDetails.map((passenger, index) => (
-                  <div key={index} className="space-y-3 p-4 border rounded-lg">
-                    <h4 className="font-medium">Passenger {index + 1}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Full Name</label>
-                        <Input
-                          value={passenger.name}
-                          onChange={(e) => handlePassengerDetailChange(index, 'name', e.target.value)}
-                          placeholder="Enter full name"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Gender</label>
-                        <Select value={passenger.gender} onValueChange={(value) => handlePassengerDetailChange(index, 'gender', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Date of Birth</label>
-                        <Input
-                          type="date"
-                          value={passenger.birthday}
-                          onChange={(e) => handlePassengerDetailChange(index, 'birthday', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            {/* Passenger and Contact Details */}
+            {renderPassengerAndContactForm()}
           </div>
 
           {/* Booking Summary */}

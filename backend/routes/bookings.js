@@ -39,8 +39,8 @@ router.post('/flights', requireAuth(), async (req, res) => {
         phone: contactInfo.emergencyContactPhone,
         relation: contactInfo.emergencyContactRelation,
       },
-      extras: selectedExtras,
-      totalPrice: totalPrice,
+      extras: selectedExtras || [], // Default to an empty array if undefined
+      totalPrice: totalPrice || 0, // Default to 0 if undefined
       flightDetails,
       createdAt: new Date().toISOString(),
       type: 'flight'

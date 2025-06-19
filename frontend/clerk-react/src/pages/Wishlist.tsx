@@ -28,10 +28,15 @@ export default function Wishlist() {
 
   useEffect(() => {
     const fetchWishlist = async () => {
-      if (!isSignedIn) return;
+      if (!isSignedIn) {
+        console.log('User not signed in, skipping wishlist fetch');
+        return;
+      }
 
       try {
+        console.log('Fetching wishlist data...');
         const token = await getToken();
+        console.log('Got token:', token ? 'Token exists' : 'No token');
 
         const response = await fetch('http://localhost:5000/api/myplan', {
           method: 'GET',
@@ -40,12 +45,19 @@ export default function Wishlist() {
           },
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
         if (!response.ok) {
-          throw new Error('Failed to fetch wishlist');
+          const errorText = await response.text();
+          console.error('Response error:', errorText);
+          throw new Error(`Failed to fetch wishlist: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('Fetched data:', data);
         const allPlans: Place[] = data.plans || [];
+        console.log('All plans:', allPlans);
         setWishlist(allPlans);
 
         const uniqueCountries = Array.from(new Set(allPlans.map((p: Place) => p.country).filter(Boolean)));
@@ -69,7 +81,7 @@ export default function Wishlist() {
 
   const handleViewDetails = (place: Place) => {
     if (!place || !place.placeId) return;
-    setLocation(`/wishlist-details/${place.placeId}`);
+    setLocation(`/wishlist-details/${place.placeId}`, { state: { place } });
   };
 
   const handleRemove = async (placeId: string) => {

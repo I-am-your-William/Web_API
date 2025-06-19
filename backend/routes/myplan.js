@@ -6,7 +6,7 @@ import { db } from '../lib/firebase.js';
 const router = express.Router();
 
 // POST /api/myplan - Save a place to "My Plan"
-router.post('/myplan', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const authHeader = req.headers.authorization || '';
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
@@ -59,27 +59,36 @@ router.post('/myplan', async (req, res) => {
 
 
 // ✅ NEW: GET /api/myplan - Fetch all saved "My Plan" items for the user
-router.get('/myplan', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
+    console.log('🔍 MyPlan GET request received');
     const authHeader = req.headers.authorization || '';
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
     if (!idToken) {
+      console.log('❌ No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
 
+    console.log('✅ Token found, checking auth...');
     const { userId } = getAuth(req);
+    console.log('User ID:', userId);
+    
     if (!userId) {
+      console.log('❌ No userId from getAuth');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    console.log('🔍 Fetching from Firestore for user:', userId);
     const snapshot = await db.collection('users').doc(userId).collection('myplan').get();
+    console.log('📊 Firestore snapshot size:', snapshot.size);
 
     const plans = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
 
+    console.log('📋 Returning plans:', plans.length, 'items');
     return res.status(200).json({ plans });
   } catch (err) {
     console.error('🔥 Failed to fetch MyPlan:', err.message);
@@ -88,7 +97,7 @@ router.get('/myplan', async (req, res) => {
 });
 
 // DELETE /api/myplan/:placeId - Remove a saved place
-router.delete('/myplan/:placeId', async (req, res) => {
+router.delete('/:placeId', async (req, res) => {
   try {
     const authHeader = req.headers.authorization || '';
     const idToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;

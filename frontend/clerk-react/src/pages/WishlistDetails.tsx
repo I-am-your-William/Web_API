@@ -1,4 +1,6 @@
-import { useLocation, useRoute } from 'wouter';
+import { useEffect, useState } from 'react';
+import { useLocation, useParams } from 'wouter';
+import { useAuth } from '@clerk/clerk-react';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,19 +9,92 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Star, MapPin, Globe } from "lucide-react";
 
-export default function WishlistDetails() {
-  const [location] = useLocation();
-  const [, setRoute] = useRoute();
-  const place = location.state?.place;
+interface Place {
+  placeId: string;
+  name: string;
+  address: string;
+  rating: number;
+  userRatingsTotal: number;
+  country: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  reviews?: any[];
+}
 
-  if (!place) {
+export default function WishlistDetails() {
+  const [, setLocation] = useLocation();
+  const params = useParams();
+  const { getToken, isSignedIn } = useAuth();
+  const [place, setPlace] = useState<Place | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get placeId from URL params
+  const placeId = params.id;
+
+  useEffect(() => {
+    const fetchPlaceDetails = async () => {
+      if (!isSignedIn || !placeId) return;
+
+      try {
+        setLoading(true);
+        const token = await getToken();
+
+        // Fetch all places from myplan and find the one we need
+        const response = await fetch('http://localhost:5000/api/myplan', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch place details');
+        }
+
+        const data = await response.json();
+        const foundPlace = data.plans?.find((p: Place) => p.placeId === placeId);
+
+        if (foundPlace) {
+          setPlace(foundPlace);
+        } else {
+          setError('Place not found in your wishlist');
+        }
+      } catch (err) {
+        console.error('Error fetching place details:', err);
+        setError('Failed to load place details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlaceDetails();
+  }, [isSignedIn, placeId, getToken]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navigation />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-slate-600">Loading place details...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!place || error) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navigation />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-12">
             <p className="text-slate-600">Place details not found.</p>
-            <Button onClick={() => setRoute('/plans', { state: { showWishlist: true } })} className="mt-4">
+            <Button onClick={() => setLocation('/wishlist')} className="mt-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Wishlist
             </Button>
@@ -48,7 +123,7 @@ export default function WishlistDetails() {
         {/* Header */}
         <div className="mb-8">
           <Button 
-            onClick={() => setRoute('/plans', { state: { showWishlist: true } })}
+            onClick={() => setLocation('/wishlist')}
             variant="ghost" 
             className="mb-4"
           >
@@ -177,7 +252,7 @@ export default function WishlistDetails() {
               </CardHeader>
               <CardContent>
                 <Button 
-                  onClick={() => setRoute('/explore')}
+                  onClick={() => setLocation('/explore')}
                   variant="outline" 
                   className="w-full"
                 >
