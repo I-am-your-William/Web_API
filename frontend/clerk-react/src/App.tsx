@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
+import { ClerkDebugger } from "@/components/ClerkDebugger";
 import Home from "@/pages/Home";
 import FlightSearch from "@/pages/FlightSearch";
 import FlightDetails from "@/pages/FlightDetails";
@@ -79,6 +80,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <ClerkDebugger />
       </TooltipProvider>
     </QueryClientProvider>
   );

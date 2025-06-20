@@ -14,15 +14,19 @@ if (!PUBLISHABLE_KEY) {
 // Determine if we're in production
 const isProduction = import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
 
+// Debug Clerk configuration
+console.log('🔍 Clerk Configuration Debug:', {
+  publishableKey: PUBLISHABLE_KEY ? `${PUBLISHABLE_KEY.substring(0, 12)}...` : 'NOT SET',
+  currentOrigin: typeof window !== 'undefined' ? window.location.origin : 'N/A',
+  isProduction,
+  mode: import.meta.env.MODE
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ClerkProvider 
-      publishableKey={PUBLISHABLE_KEY} 
+      publishableKey={PUBLISHABLE_KEY}
       afterSignOutUrl="/"
-      afterSignInUrl="/"
-      afterSignUpUrl="/"
-      signInFallbackRedirectUrl="/"
-      signUpFallbackRedirectUrl="/"
       appearance={{
         baseTheme: undefined,
         variables: {
