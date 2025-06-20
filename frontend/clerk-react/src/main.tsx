@@ -11,9 +11,25 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Add your Clerk Publishable Key to the .env file')
 }
 
+// Determine if we're in production
+const isProduction = import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider 
+      publishableKey={PUBLISHABLE_KEY} 
+      afterSignOutUrl="/"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
+      appearance={{
+        baseTheme: undefined,
+        variables: {
+          colorPrimary: '#000000',
+        },
+      }}
+    >
       <App />
     </ClerkProvider>
   </React.StrictMode>,
