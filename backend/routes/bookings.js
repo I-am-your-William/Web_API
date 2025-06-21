@@ -2,7 +2,6 @@ import express from 'express';
 import { clerkMiddleware, requireAuth, getAuth } from '@clerk/express';
 import { db } from '../lib/firebase.js';
 
-
 const router = express.Router();
 router.use(clerkMiddleware());
 
@@ -59,31 +58,6 @@ router.post('/flights', requireAuth(), async (req, res) => {
 });
 
 
-// === LOCATION BOOKING (Existing Code) ===
-router.post('/', requireAuth(), async (req, res) => {
-  const { userId } = getAuth(req);
-  const { locationName, bookingDate, startDate, endDate } = req.body;
-
-  try {
-    const duplicateCheck = await db.collection('bookings')
-      .where('userId', '==', userId)
-      .where('locationName', '==', locationName)
-      .where('startDate', '==', startDate)
-      .get();
-
-    if (!duplicateCheck.empty) {
-      return res.status(409).json({ error: 'Booking already exists for this location and date.' });
-    }
-
-    const newBooking = { userId, locationName, bookingDate, startDate, endDate, type: 'location' };
-    const docRef = await db.collection('bookings').add(newBooking);
-
-    res.status(201).json({ id: docRef.id, ...newBooking });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create booking.' });
-  }
-});
-
 // === READ ALL USER BOOKINGS ===
 router.get('/', requireAuth(), async (req, res) => {
   const { userId } = getAuth(req);
@@ -116,35 +90,6 @@ router.get('/:id/contacts', requireAuth(), async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch contacts and extras.' });
-  }
-});
-
-// === UPDATE LOCATION BOOKING ===
-router.put('/:id', requireAuth(), async (req, res) => {
-  const { id } = req.params;
-  const { locationName, bookingDate, startDate, endDate } = req.body;
-  const { userId } = getAuth(req);
-
-  try {
-    const docRef = db.collection('bookings').doc(id);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) return res.status(404).json({ error: 'Booking not found.' });
-    if (docSnap.data().userId !== userId) return res.status(403).json({ error: 'Not authorised to update this booking.' });
-
-    const duplicateCheck = await db.collection('bookings')
-      .where('userId', '==', userId)
-      .where('locationName', '==', locationName)
-      .where('startDate', '==', startDate)
-      .get();
-
-    const isDuplicate = duplicateCheck.docs.some(doc => doc.id !== id);
-    if (isDuplicate) return res.status(409).json({ error: 'Duplicate booking exists.' });
-
-    await docRef.update({ locationName, bookingDate, startDate, endDate });
-    res.json({ message: 'Booking updated.' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update booking.' });
   }
 });
 
