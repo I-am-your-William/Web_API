@@ -6,7 +6,6 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft, Plane, Calendar, MapPin, Users, Luggage, User, CreditCard, Mail, Phone, Shield, Plus, Coffee, Clock,
 } from "lucide-react";
@@ -23,6 +22,9 @@ type Passenger = {
   name: string;
   gender: string;
   birthday: string;
+  phone?: string;
+  email?: string;
+  title?: string; 
 };
 
 type Extras = {
@@ -271,7 +273,7 @@ export default function ViewBooking() {
               <div>
                 <div className="text-sm text-slate-500 mb-1">Total Price</div>
                 <div className="font-semibold text-primary text-lg">
-                  {booking.price.currency} {booking.price.total}
+                  {booking.price.currency} {totalPrice ?? booking.price.grandTotal ?? booking.price.total} 
                 </div>
               </div>
               <div>
@@ -404,7 +406,7 @@ export default function ViewBooking() {
                         <div className="space-y-2">
                           <div>
                             <span className="text-sm text-slate-500">Name</span>
-                            <div className="font-semibold text-slate-900">{passenger.name}</div>
+                            <div className="font-semibold text-slate-900">{passenger.title} {passenger.name}</div>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -417,6 +419,19 @@ export default function ViewBooking() {
                                 {new Date(passenger.birthday).toLocaleDateString()}
                               </div>
                             </div>
+                            {/* Passenger Contact (if available) */}
+                              {(passenger.email || passenger.phone) && (
+                                <div className="mt-3 flex flex-row items-center space-x-6">
+                                  <div className="flex items-center space-x-2">
+                                    <Mail className="w-4 h-4 text-primary" />
+                                    <span className="text-sm text-slate-700"> {passenger.email || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Phone className="w-4 h-4 text-primary" />
+                                    <span className="text-sm text-slate-700"> {passenger.phone || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -430,6 +445,7 @@ export default function ViewBooking() {
               <h2 className="text-2xl font-bold text-slate-900 mb-6">Contact Information</h2>
               <Card>
                 <CardContent className="p-6 space-y-4">
+                  <div className="mt-4 font-semibold text-slate-900">Primary Contact</div>
                   <div className="flex items-center space-x-3">
                     <Mail className="w-5 h-5 text-primary" />
                     <span className="font-medium text-slate-800">Email:</span>
@@ -440,6 +456,23 @@ export default function ViewBooking() {
                     <span className="font-medium text-slate-800">Phone:</span>
                     <span className="text-slate-700">{primaryContact?.phone || booking.contact?.phone || 'N/A'}</span>
                   </div>
+                  {/* Emergency Contact */}
+                    {emergencyContact && (
+                      <>
+                        <div className="mt-4 font-semibold text-slate-900">Emergency Contact</div>
+                        <div className="flex items-center space-x-3">
+                          <Mail className="w-5 h-5 text-amber-600" />
+                          <span className="font-medium text-slate-800">Name:</span>
+                          <span className="text-slate-700">{emergencyContact.name || 'N/A'} ({emergencyContact.relation || 'N/A'})</span>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <Phone className="w-5 h-5 text-amber-600" />
+                          <span className="font-medium text-slate-800">Phone:</span>
+                          <span className="text-slate-700">{emergencyContact.phone || 'N/A'}</span>
+                        </div>
+                      </>
+                    )}
                 </CardContent>
               </Card>
             </div>
@@ -455,14 +488,14 @@ export default function ViewBooking() {
                   </div>
                   <div className="flex items-center space-x-3">
                     <Plus className="w-5 h-5 text-primary" />
-                    <span className="font-medium text-slate-800">Extras:</span>
+                    <span className="font-medium text-slate-800">Total:</span>
                     <span className="text-slate-700">{booking.price.currency} {(+booking.price.total - +booking.price.base).toFixed(2)}</span>
                   </div>
+                  {renderExtras(extras ?? booking.extras)}
                   <div className="flex items-center space-x-3">
                     <span className="font-medium text-slate-800">Grand Total:</span>
                     <span className="text-primary font-bold text-lg">{booking.price.currency} {totalPrice ?? booking.price.grandTotal ?? booking.price.total}</span>
                   </div>
-                  {renderExtras(extras ?? booking.extras)}
                 </CardContent>
               </Card>
             </div>
